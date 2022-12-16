@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	metric "github.com/denistakeda/alerting/internal/metric"
+	"github.com/denistakeda/alerting/internal/metric"
 )
 
 type MemStorage struct {
@@ -20,11 +20,11 @@ func NewMemStorage() *MemStorage {
 	}
 }
 
-func (ms *MemStorage) RegisterGauge(name string, value float64) {
+func (ms *MemStorage) StoreGauge(name string, value float64) {
 	ms.gauges[name] = value
 }
 
-func (ms *MemStorage) RegisterCounter(name string, value int64) {
+func (ms *MemStorage) StoreCounter(name string, value int64) {
 	oldValue, ok := ms.counters[name]
 	if !ok {
 		oldValue = 0
@@ -54,14 +54,14 @@ func (ms *MemStorage) Metrics() []metric.Metric {
 	return res
 }
 
-func (m *MemStorage) ToString() string {
+func (ms *MemStorage) ToString() string {
 	b := new(bytes.Buffer)
 	fmt.Fprintf(b, "Gauges:\n")
-	for name, value := range m.gauges {
+	for name, value := range ms.gauges {
 		fmt.Fprintf(b, "%s=%v\n", name, value)
 	}
 	fmt.Fprintf(b, "Counters:\n")
-	for name, value := range m.counters {
+	for name, value := range ms.counters {
 		fmt.Fprintf(b, "%s=%v\n", name, value)
 	}
 	return b.String()

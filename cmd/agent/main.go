@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"time"
 
-	memstorage "github.com/denistakeda/alerting/internal/memstorage"
-	metric "github.com/denistakeda/alerting/internal/metric"
+	"github.com/denistakeda/alerting/internal/memstorage"
+	"github.com/denistakeda/alerting/internal/metric"
 )
 
 const (
