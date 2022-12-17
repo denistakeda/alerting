@@ -2,13 +2,13 @@ package main
 
 import (
 	"github.com/denistakeda/alerting/cmd/server/handler"
-	"github.com/denistakeda/alerting/internal/memstorage"
 	s "github.com/denistakeda/alerting/internal/storage"
+	"github.com/denistakeda/alerting/internal/storage/memstorage"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	storage := memstorage.NewMemStorage()
+	storage := memstorage.New()
 	r := setupRouter(storage)
 	r.Run()
 }

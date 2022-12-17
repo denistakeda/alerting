@@ -5,14 +5,18 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/denistakeda/alerting/internal/metric"
 	s "github.com/denistakeda/alerting/internal/storage"
 	"github.com/stretchr/testify/assert"
 )
 
 type mockStorage struct{}
 
-func (m *mockStorage) StoreGauge(name string, value float64) {}
-func (m *mockStorage) StoreCounter(name string, value int64) {}
+func (m *mockStorage) Get(metricType string, metricName string) (metric.Metric, bool) {
+	return nil, false
+}
+func (m *mockStorage) Update(metric metric.Metric) error { return nil }
+func (m *mockStorage) All() []metric.Metric              { return []metric.Metric{} }
 
 func Test_setupRouter(t *testing.T) {
 	tests := []struct {

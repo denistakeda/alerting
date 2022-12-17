@@ -8,8 +8,11 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/denistakeda/alerting/internal/memstorage"
 	"github.com/denistakeda/alerting/internal/metric"
+	"github.com/denistakeda/alerting/internal/metric/counter"
+	"github.com/denistakeda/alerting/internal/metric/gauge"
+	"github.com/denistakeda/alerting/internal/storage"
+	"github.com/denistakeda/alerting/internal/storage/memstorage"
 )
 
 const (
@@ -19,7 +22,7 @@ const (
 
 func main() {
 	mem := &runtime.MemStats{}
-	memStorage := memstorage.NewMemStorage()
+	memStorage := memstorage.New()
 
 	// Update metrics
 	pollTicker := time.NewTicker(PollInterval)
@@ -33,49 +36,49 @@ func main() {
 	// Send metrics
 	reportTicker := time.NewTicker(ReportInterval)
 	for range reportTicker.C {
-		sendMetrics(memStorage.Metrics(), "http://127.0.0.1:8080")
+		sendMetrics(memStorage.All(), "http://127.0.0.1:8080")
 	}
 }
 
-func registerMetrics(memStats *runtime.MemStats, memStorage *memstorage.MemStorage) {
-	memStorage.StoreGauge("Alloc", float64(memStats.Alloc))
-	memStorage.StoreGauge("BuckHashSys", float64(memStats.BuckHashSys))
-	memStorage.StoreGauge("Frees", float64(memStats.Frees))
-	memStorage.StoreGauge("GCCPUFraction", float64(memStats.GCCPUFraction))
-	memStorage.StoreGauge("GCSys", float64(memStats.GCSys))
-	memStorage.StoreGauge("HeapAlloc", float64(memStats.HeapAlloc))
-	memStorage.StoreGauge("HeapIdle", float64(memStats.HeapIdle))
-	memStorage.StoreGauge("HeapInuse", float64(memStats.HeapInuse))
-	memStorage.StoreGauge("HeapObjects", float64(memStats.HeapObjects))
-	memStorage.StoreGauge("HeapReleased", float64(memStats.HeapReleased))
-	memStorage.StoreGauge("HeapSys", float64(memStats.HeapSys))
-	memStorage.StoreGauge("LastGC", float64(memStats.LastGC))
-	memStorage.StoreGauge("Lookups", float64(memStats.Lookups))
-	memStorage.StoreGauge("MCacheInuse", float64(memStats.MCacheInuse))
-	memStorage.StoreGauge("MCacheSys", float64(memStats.MCacheSys))
-	memStorage.StoreGauge("MSpanInUse", float64(memStats.MSpanInuse))
-	memStorage.StoreGauge("MSpanSys", float64(memStats.MSpanSys))
-	memStorage.StoreGauge("Mallocs", float64(memStats.Mallocs))
-	memStorage.StoreGauge("NextGC", float64(memStats.NextGC))
-	memStorage.StoreGauge("NumForcedGC", float64(memStats.NumForcedGC))
-	memStorage.StoreGauge("NumGC", float64(memStats.NumGC))
-	memStorage.StoreGauge("OtherSys", float64(memStats.OtherSys))
-	memStorage.StoreGauge("PauseTotalNs", float64(memStats.PauseTotalNs))
-	memStorage.StoreGauge("StackInuse", float64(memStats.StackInuse))
-	memStorage.StoreGauge("StackSys", float64(memStats.StackSys))
-	memStorage.StoreGauge("Sys", float64(memStats.Sys))
-	memStorage.StoreGauge("TotalAlloc", float64(memStats.TotalAlloc))
+func registerMetrics(memStats *runtime.MemStats, store storage.Storage) {
+	store.Update(gauge.New("Alloc", float64(memStats.Alloc)))
+	store.Update(gauge.New("BuckHashSys", float64(memStats.BuckHashSys)))
+	store.Update(gauge.New("Frees", float64(memStats.Frees)))
+	store.Update(gauge.New("GCCPUFraction", float64(memStats.GCCPUFraction)))
+	store.Update(gauge.New("GCSys", float64(memStats.GCSys)))
+	store.Update(gauge.New("HeapAlloc", float64(memStats.HeapAlloc)))
+	store.Update(gauge.New("HeapIdle", float64(memStats.HeapIdle)))
+	store.Update(gauge.New("HeapInuse", float64(memStats.HeapInuse)))
+	store.Update(gauge.New("HeapObjects", float64(memStats.HeapObjects)))
+	store.Update(gauge.New("HeapReleased", float64(memStats.HeapReleased)))
+	store.Update(gauge.New("HeapSys", float64(memStats.HeapSys)))
+	store.Update(gauge.New("LastGC", float64(memStats.LastGC)))
+	store.Update(gauge.New("Lookups", float64(memStats.Lookups)))
+	store.Update(gauge.New("MCacheInuse", float64(memStats.MCacheInuse)))
+	store.Update(gauge.New("MCacheSys", float64(memStats.MCacheSys)))
+	store.Update(gauge.New("MSpanInUse", float64(memStats.MSpanInuse)))
+	store.Update(gauge.New("MSpanSys", float64(memStats.MSpanSys)))
+	store.Update(gauge.New("Mallocs", float64(memStats.Mallocs)))
+	store.Update(gauge.New("NextGC", float64(memStats.NextGC)))
+	store.Update(gauge.New("NumForcedGC", float64(memStats.NumForcedGC)))
+	store.Update(gauge.New("NumGC", float64(memStats.NumGC)))
+	store.Update(gauge.New("OtherSys", float64(memStats.OtherSys)))
+	store.Update(gauge.New("PauseTotalNs", float64(memStats.PauseTotalNs)))
+	store.Update(gauge.New("StackInuse", float64(memStats.StackInuse)))
+	store.Update(gauge.New("StackSys", float64(memStats.StackSys)))
+	store.Update(gauge.New("Sys", float64(memStats.Sys)))
+	store.Update(gauge.New("TotalAlloc", float64(memStats.TotalAlloc)))
 
-	memStorage.StoreCounter("PollCount", 1)
-	memStorage.StoreGauge("RandomValue", float64(rand.Int()))
+	store.Update(counter.New("PollCount", 1))
+	store.Update(gauge.New("RandomValue", float64(rand.Int())))
 }
 
 func sendMetrics(metrics []metric.Metric, server string) {
 	for _, m := range metrics {
 		met := m
 		go func() {
-			url := fmt.Sprintf("%s/update/%s/%s", server, met.Type, met.Name)
-			body := bytes.NewBuffer([]byte(met.Value))
+			url := fmt.Sprintf("%s/update/%s/%s", server, met.Type(), met.Name())
+			body := bytes.NewBuffer([]byte(met.StrValue()))
 			resp, err := http.Post(url, "text/plain", body)
 			if err != nil {
 				fmt.Printf("Unable to file a request to URL: %s, error: %v\n", url, err)
