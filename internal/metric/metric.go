@@ -10,9 +10,9 @@ const (
 )
 
 type Metric struct {
-	Type  Type
-	Name  string
-	Value string
+	Type  Type   `uri:"metric_type" binding:"required"`
+	Name  string `uri:"metric_name" binding:"required"`
+	Value string `uri:"metric_value" binding:"required"`
 }
 
 func ParseType(metricType string) (Type, error) {

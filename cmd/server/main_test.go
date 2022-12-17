@@ -1,4 +1,4 @@
-package handler
+package main
 
 import (
 	"net/http"
@@ -7,7 +7,6 @@ import (
 
 	s "github.com/denistakeda/alerting/internal/storage"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type mockStorage struct{}
@@ -15,7 +14,7 @@ type mockStorage struct{}
 func (m *mockStorage) StoreGauge(name string, value float64) {}
 func (m *mockStorage) StoreCounter(name string, value int64) {}
 
-func TestUpdateHandler(t *testing.T) {
+func Test_setupRouter(t *testing.T) {
 	tests := []struct {
 		name     string
 		request  string
@@ -67,14 +66,13 @@ func TestUpdateHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodPost, tt.request, nil)
+			router := setupRouter(tt.storage)
+
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(UpdateHandler(tt.storage))
-			h(w, request)
-			result := w.Result()
-			assert.Equal(t, tt.wantCode, result.StatusCode)
-			err := result.Body.Close()
-			require.NoError(t, err)
+			req, _ := http.NewRequest("POST", tt.request, nil)
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.wantCode, w.Code)
 		})
 	}
 }
