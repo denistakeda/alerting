@@ -38,7 +38,7 @@ func (g *gauge) Value() any {
 }
 
 func (g *gauge) StrValue() string {
-	return strconv.FormatFloat(g.value, 'E', -1, 64)
+	return strconv.FormatFloat(g.value, 'f', 3, 64)
 }
 
 func (g *gauge) UpdateValue(val any) error {
