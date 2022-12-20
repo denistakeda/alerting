@@ -15,7 +15,7 @@ import (
 
 var UnknownMetricTypeError = errors.New("unknown metric type")
 
-type metricUri struct {
+type updateMetricUri struct {
 	MetricType  string `uri:"metric_type" binding:"required"`
 	MetricName  string `uri:"metric_name" binding:"required"`
 	MetricValue string `uri:"metric_value" binding:"required"`
@@ -23,7 +23,7 @@ type metricUri struct {
 
 func UpdateMetricHandler(storage s.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var uri metricUri
+		var uri updateMetricUri
 		if err := c.ShouldBindUri(&uri); err != nil {
 			c.AbortWithError(http.StatusBadRequest, err)
 			return
@@ -46,7 +46,7 @@ func UpdateMetricHandler(storage s.Storage) gin.HandlerFunc {
 	}
 }
 
-func createMetric(uri metricUri) (metric.Metric, error) {
+func createMetric(uri updateMetricUri) (metric.Metric, error) {
 	switch uri.MetricType {
 	case "gauge":
 		return gauge.FromStr(uri.MetricName, uri.MetricValue)
