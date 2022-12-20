@@ -25,7 +25,7 @@ func FromStr(name, value string) (*counter, error) {
 	return &counter{name, val}, nil
 }
 
-func (_ *counter) Type() string {
+func (c *counter) Type() string {
 	return "counter"
 }
 

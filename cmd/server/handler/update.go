@@ -13,9 +13,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var UnknownMetricTypeError = errors.New("unknown metric type")
+var ErrUnknownMetricType = errors.New("unknown metric type")
 
-type updateMetricUri struct {
+type updateMetricURI struct {
 	MetricType  string `uri:"metric_type" binding:"required"`
 	MetricName  string `uri:"metric_name" binding:"required"`
 	MetricValue string `uri:"metric_value" binding:"required"`
@@ -23,14 +23,14 @@ type updateMetricUri struct {
 
 func UpdateMetricHandler(storage s.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var uri updateMetricUri
+		var uri updateMetricURI
 		if err := c.ShouldBindUri(&uri); err != nil {
 			c.AbortWithError(http.StatusBadRequest, err)
 			return
 		}
 
 		m, err := createMetric(uri)
-		if errors.Is(err, UnknownMetricTypeError) {
+		if errors.Is(err, ErrUnknownMetricType) {
 			c.AbortWithError(http.StatusNotImplemented, err)
 			return
 		}
@@ -46,13 +46,13 @@ func UpdateMetricHandler(storage s.Storage) gin.HandlerFunc {
 	}
 }
 
-func createMetric(uri updateMetricUri) (metric.Metric, error) {
+func createMetric(uri updateMetricURI) (metric.Metric, error) {
 	switch uri.MetricType {
 	case "gauge":
 		return gauge.FromStr(uri.MetricName, uri.MetricValue)
 	case "counter":
 		return counter.FromStr(uri.MetricName, uri.MetricValue)
 	default:
-		return nil, errextra.Wrapf(UnknownMetricTypeError, "expected \"gauge\" or \"counter\", got \"%s\"", uri.MetricType)
+		return nil, errextra.Wrapf(ErrUnknownMetricType, "expected \"gauge\" or \"counter\", got \"%s\"", uri.MetricType)
 	}
 }

@@ -7,14 +7,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type getMetricUri struct {
+type getMetricURI struct {
 	MetricType string `uri:"metric_type" binding:"required"`
 	MetricName string `uri:"metric_name" binding:"required"`
 }
 
 func GetMetricHandler(storage s.Storage) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var uri getMetricUri
+		var uri getMetricURI
 		if err := c.ShouldBindUri(&uri); err != nil {
 			c.AbortWithError(http.StatusBadRequest, err)
 			return

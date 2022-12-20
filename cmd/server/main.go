@@ -10,13 +10,13 @@ import (
 func main() {
 	storage := memstorage.New()
 	r := setupRouter(storage)
+	r.LoadHTMLGlob("cmd/server/templates/*")
 	r.Run()
 }
 
 func setupRouter(storage s.Storage) *gin.Engine {
 	r := gin.Default()
 	r.RedirectTrailingSlash = false
-	r.LoadHTMLGlob("cmd/server/templates/*")
 
 	r.POST("/update/:metric_type/:metric_name/:metric_value", handler.UpdateMetricHandler(storage))
 	r.GET("/value/:metric_type/:metric_name", handler.GetMetricHandler(storage))
