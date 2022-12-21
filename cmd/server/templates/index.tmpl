@@ -1,0 +1,14 @@
+<html>
+	<h1>
+        Metrics
+	</h1>
+    <body>
+        <ul>
+            {{ range .Metrics }}
+                <li>
+                    {{ .Type }}: {{ .Name }} = {{ .Value }}
+                </li>
+            {{ end }}
+        </ul>
+    </body>
+</html>
