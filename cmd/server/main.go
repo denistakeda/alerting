@@ -18,8 +18,10 @@ func setupRouter(storage s.Storage) *gin.Engine {
 	r := gin.Default()
 	r.RedirectTrailingSlash = false
 
-	r.POST("/update/:metric_type/:metric_name/:metric_value", handler.UpdateMetricHandler(storage))
-	r.GET("/value/:metric_type/:metric_name", handler.GetMetricHandler(storage))
-	r.GET("/", handler.MainPageHandler(storage))
+	h := handler.New(storage)
+
+	r.POST("/update/:metric_type/:metric_name/:metric_value", h.UpdateMetricHandler)
+	r.GET("/value/:metric_type/:metric_name", h.GetMetricHandler)
+	r.GET("/", h.MainPageHandler)
 	return r
 }

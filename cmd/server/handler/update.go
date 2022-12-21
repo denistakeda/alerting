@@ -9,7 +9,6 @@ import (
 	"github.com/denistakeda/alerting/internal/metric"
 	"github.com/denistakeda/alerting/internal/metric/counter"
 	"github.com/denistakeda/alerting/internal/metric/gauge"
-	s "github.com/denistakeda/alerting/internal/storage"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,29 +20,27 @@ type updateMetricURI struct {
 	MetricValue string `uri:"metric_value" binding:"required"`
 }
 
-func UpdateMetricHandler(storage s.Storage) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var uri updateMetricURI
-		if err := c.ShouldBindUri(&uri); err != nil {
-			c.AbortWithError(http.StatusBadRequest, err)
-			return
-		}
-
-		m, err := createMetric(uri)
-		if errors.Is(err, ErrUnknownMetricType) {
-			c.AbortWithError(http.StatusNotImplemented, err)
-			return
-		}
-		if err != nil {
-			c.AbortWithError(http.StatusBadRequest, err)
-			return
-		}
-
-		if err := storage.Update(m); err != nil {
-			c.AbortWithError(http.StatusBadRequest, err)
-		}
-		c.Status(http.StatusOK)
+func (h *handler) UpdateMetricHandler(c *gin.Context) {
+	var uri updateMetricURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
 	}
+
+	m, err := createMetric(uri)
+	if errors.Is(err, ErrUnknownMetricType) {
+		c.AbortWithError(http.StatusNotImplemented, err)
+		return
+	}
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	if err := h.storage.Update(m); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+	}
+	c.Status(http.StatusOK)
 }
 
 func createMetric(uri updateMetricURI) (metric.Metric, error) {

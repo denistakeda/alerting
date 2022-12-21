@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/denistakeda/alerting/internal/metric"
-	s "github.com/denistakeda/alerting/internal/storage"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,10 +25,8 @@ func metricsToRepresentation(metrics []metric.Metric) []met {
 	return ms
 }
 
-func MainPageHandler(storage s.Storage) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.tmpl", gin.H{
-			"Metrics": metricsToRepresentation(storage.All()),
-		})
-	}
+func (h *handler) MainPageHandler(c *gin.Context) {
+	c.HTML(http.StatusOK, "index.tmpl", gin.H{
+		"Metrics": metricsToRepresentation(h.storage.All()),
+	})
 }
