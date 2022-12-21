@@ -37,7 +37,7 @@ func TestFromStr(t *testing.T) {
 				name:  "test",
 				value: "test",
 			},
-			want:    &gauge{},
+			want:    nil,
 			wantErr: true,
 		},
 	}
