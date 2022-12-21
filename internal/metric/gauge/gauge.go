@@ -20,7 +20,7 @@ func New(name string, value float64) *gauge {
 func FromStr(name, value string) (*gauge, error) {
 	val, err := strToValue(value)
 	if err != nil {
-		return &gauge{}, err
+		return nil, err
 	}
 	return &gauge{name, val}, nil
 }

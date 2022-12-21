@@ -20,7 +20,7 @@ func New(name string, value int64) *counter {
 func FromStr(name, value string) (*counter, error) {
 	val, err := strToValue(value)
 	if err != nil {
-		return &counter{}, err
+		return nil, err
 	}
 	return &counter{name, val}, nil
 }
