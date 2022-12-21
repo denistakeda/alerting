@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"runtime"
@@ -41,36 +42,43 @@ func main() {
 }
 
 func registerMetrics(memStats *runtime.MemStats, store storage.Storage) {
-	store.Update(gauge.New("Alloc", float64(memStats.Alloc)))
-	store.Update(gauge.New("BuckHashSys", float64(memStats.BuckHashSys)))
-	store.Update(gauge.New("Frees", float64(memStats.Frees)))
-	store.Update(gauge.New("GCCPUFraction", float64(memStats.GCCPUFraction)))
-	store.Update(gauge.New("GCSys", float64(memStats.GCSys)))
-	store.Update(gauge.New("HeapAlloc", float64(memStats.HeapAlloc)))
-	store.Update(gauge.New("HeapIdle", float64(memStats.HeapIdle)))
-	store.Update(gauge.New("HeapInuse", float64(memStats.HeapInuse)))
-	store.Update(gauge.New("HeapObjects", float64(memStats.HeapObjects)))
-	store.Update(gauge.New("HeapReleased", float64(memStats.HeapReleased)))
-	store.Update(gauge.New("HeapSys", float64(memStats.HeapSys)))
-	store.Update(gauge.New("LastGC", float64(memStats.LastGC)))
-	store.Update(gauge.New("Lookups", float64(memStats.Lookups)))
-	store.Update(gauge.New("MCacheInuse", float64(memStats.MCacheInuse)))
-	store.Update(gauge.New("MCacheSys", float64(memStats.MCacheSys)))
-	store.Update(gauge.New("MSpanInUse", float64(memStats.MSpanInuse)))
-	store.Update(gauge.New("MSpanSys", float64(memStats.MSpanSys)))
-	store.Update(gauge.New("Mallocs", float64(memStats.Mallocs)))
-	store.Update(gauge.New("NextGC", float64(memStats.NextGC)))
-	store.Update(gauge.New("NumForcedGC", float64(memStats.NumForcedGC)))
-	store.Update(gauge.New("NumGC", float64(memStats.NumGC)))
-	store.Update(gauge.New("OtherSys", float64(memStats.OtherSys)))
-	store.Update(gauge.New("PauseTotalNs", float64(memStats.PauseTotalNs)))
-	store.Update(gauge.New("StackInuse", float64(memStats.StackInuse)))
-	store.Update(gauge.New("StackSys", float64(memStats.StackSys)))
-	store.Update(gauge.New("Sys", float64(memStats.Sys)))
-	store.Update(gauge.New("TotalAlloc", float64(memStats.TotalAlloc)))
+	registerMetric(store, gauge.New("Alloc", float64(memStats.Alloc)))
+	registerMetric(store, gauge.New("BuckHashSys", float64(memStats.BuckHashSys)))
+	registerMetric(store, gauge.New("Frees", float64(memStats.Frees)))
+	registerMetric(store, gauge.New("GCCPUFraction", float64(memStats.GCCPUFraction)))
+	registerMetric(store, gauge.New("GCSys", float64(memStats.GCSys)))
+	registerMetric(store, gauge.New("HeapAlloc", float64(memStats.HeapAlloc)))
+	registerMetric(store, gauge.New("HeapIdle", float64(memStats.HeapIdle)))
+	registerMetric(store, gauge.New("HeapInuse", float64(memStats.HeapInuse)))
+	registerMetric(store, gauge.New("HeapObjects", float64(memStats.HeapObjects)))
+	registerMetric(store, gauge.New("HeapReleased", float64(memStats.HeapReleased)))
+	registerMetric(store, gauge.New("HeapSys", float64(memStats.HeapSys)))
+	registerMetric(store, gauge.New("LastGC", float64(memStats.LastGC)))
+	registerMetric(store, gauge.New("Lookups", float64(memStats.Lookups)))
+	registerMetric(store, gauge.New("MCacheInuse", float64(memStats.MCacheInuse)))
+	registerMetric(store, gauge.New("MCacheSys", float64(memStats.MCacheSys)))
+	registerMetric(store, gauge.New("MSpanInUse", float64(memStats.MSpanInuse)))
+	registerMetric(store, gauge.New("MSpanSys", float64(memStats.MSpanSys)))
+	registerMetric(store, gauge.New("Mallocs", float64(memStats.Mallocs)))
+	registerMetric(store, gauge.New("NextGC", float64(memStats.NextGC)))
+	registerMetric(store, gauge.New("NumForcedGC", float64(memStats.NumForcedGC)))
+	registerMetric(store, gauge.New("NumGC", float64(memStats.NumGC)))
+	registerMetric(store, gauge.New("OtherSys", float64(memStats.OtherSys)))
+	registerMetric(store, gauge.New("PauseTotalNs", float64(memStats.PauseTotalNs)))
+	registerMetric(store, gauge.New("StackInuse", float64(memStats.StackInuse)))
+	registerMetric(store, gauge.New("StackSys", float64(memStats.StackSys)))
+	registerMetric(store, gauge.New("Sys", float64(memStats.Sys)))
+	registerMetric(store, gauge.New("TotalAlloc", float64(memStats.TotalAlloc)))
 
-	store.Update(counter.New("PollCount", 1))
-	store.Update(gauge.New("RandomValue", float64(rand.Int())))
+	registerMetric(store, counter.New("PollCount", 1))
+	registerMetric(store, gauge.New("RandomValue", float64(rand.Int())))
+}
+
+func registerMetric(store storage.Storage, m metric.Metric) {
+	err := store.Update(m)
+	if err != nil {
+		log.Printf("Failed to update metric %v\n", m)
+	}
 }
 
 func sendMetrics(metrics []metric.Metric, server string) {
