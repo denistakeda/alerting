@@ -5,18 +5,16 @@ import (
 )
 
 type memstorage struct {
-	types map[string]map[string]metric.Metric
-	size  int
+	types map[metric.MetricType]map[string]*metric.Metric
 }
 
 func New() *memstorage {
 	return &memstorage{
-		types: make(map[string]map[string]metric.Metric),
-		size:  0,
+		types: make(map[metric.MetricType]map[string]*metric.Metric),
 	}
 }
 
-func (m *memstorage) Get(metricType string, metricName string) (metric.Metric, bool) {
+func (m *memstorage) Get(metricType metric.MetricType, metricName string) (*metric.Metric, bool) {
 	group, ok := m.types[metricType]
 	if !ok {
 		return nil, false
@@ -26,29 +24,22 @@ func (m *memstorage) Get(metricType string, metricName string) (metric.Metric, b
 	return metric, ok
 }
 
-func (m *memstorage) Update(updatedMetric metric.Metric) error {
+func (m *memstorage) Update(updatedMetric *metric.Metric) error {
 	group, ok := m.types[updatedMetric.Type()]
 	if !ok {
-		group = make(map[string]metric.Metric)
+		group = make(map[string]*metric.Metric)
 		m.types[updatedMetric.Type()] = group
 	}
 
-	oldMetric, ok := group[updatedMetric.Name()]
-	if !ok {
-		group[updatedMetric.Name()] = updatedMetric
-		m.size++
-		return nil
-	}
-	return oldMetric.UpdateValue(updatedMetric.Value())
+	group[updatedMetric.Name()] = metric.Update(group[updatedMetric.Name()], updatedMetric)
+	return nil
 }
 
-func (m *memstorage) All() []metric.Metric {
-	res := make([]metric.Metric, m.size)
-	i := 0
+func (m *memstorage) All() []*metric.Metric {
+	res := []*metric.Metric{}
 	for _, group := range m.types {
 		for _, met := range group {
-			res[i] = met
-			i++
+			res = append(res, met)
 		}
 	}
 	return res

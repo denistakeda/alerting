@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 
+	"github.com/denistakeda/alerting/internal/metric"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,7 +19,12 @@ func (h *handler) GetMetricHandler(c *gin.Context) {
 		return
 	}
 
-	m, ok := h.storage.Get(uri.MetricType, uri.MetricName)
+	metricType, err := metric.TypeFromString(uri.MetricType)
+	if err != nil {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+	m, ok := h.storage.Get(metricType, uri.MetricName)
 	if !ok {
 		c.AbortWithStatus(http.StatusNotFound)
 		return

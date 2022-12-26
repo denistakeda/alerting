@@ -13,11 +13,11 @@ type met struct {
 	Value string
 }
 
-func metricsToRepresentation(metrics []metric.Metric) []met {
+func metricsToRepresentation(metrics []*metric.Metric) []met {
 	ms := make([]met, len(metrics))
 	for i, m := range metrics {
 		ms[i] = met{
-			Type:  m.Type(),
+			Type:  m.StrType(),
 			Name:  m.Name(),
 			Value: m.StrValue(),
 		}

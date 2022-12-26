@@ -7,8 +7,6 @@ import (
 	"testing"
 
 	"github.com/denistakeda/alerting/internal/metric"
-	"github.com/denistakeda/alerting/internal/metric/counter"
-	"github.com/denistakeda/alerting/internal/metric/gauge"
 	s "github.com/denistakeda/alerting/internal/storage"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
 	"github.com/stretchr/testify/assert"
@@ -17,11 +15,11 @@ import (
 
 type mockStorage struct{}
 
-func (m *mockStorage) Get(metricType string, metricName string) (metric.Metric, bool) {
+func (m *mockStorage) Get(metricType metric.MetricType, metricName string) (*metric.Metric, bool) {
 	return nil, false
 }
-func (m *mockStorage) Update(metric metric.Metric) error { return nil }
-func (m *mockStorage) All() []metric.Metric              { return []metric.Metric{} }
+func (m *mockStorage) Update(metric *metric.Metric) error { return nil }
+func (m *mockStorage) All() []*metric.Metric              { return []*metric.Metric{} }
 
 func Test_updateMetric(t *testing.T) {
 	tests := []struct {
@@ -87,9 +85,9 @@ func Test_updateMetric(t *testing.T) {
 }
 
 func Test_getMetric(t *testing.T) {
-	m1 := gauge.New("gauge1", 3.14)
-	m2 := gauge.New("gauge2", 5.18)
-	m3 := counter.New("counter1", 7)
+	m1 := metric.NewGauge("gauge1", 3.14)
+	m2 := metric.NewGauge("gauge2", 5.18)
+	m3 := metric.NewCounter("counter1", 7)
 	type want struct {
 		code int
 		body string
@@ -102,8 +100,8 @@ func Test_getMetric(t *testing.T) {
 	}{
 		{
 			name:    "gauge success case",
-			request: fmt.Sprintf("/value/%s/%s", m1.Type(), m1.Name()),
-			storage: createStorage(t, []metric.Metric{m1, m2, m3}),
+			request: fmt.Sprintf("/value/%s/%s", m1.StrType(), m1.Name()),
+			storage: createStorage(t, []*metric.Metric{m1, m2, m3}),
 			want: want{
 				code: http.StatusOK,
 				body: m1.StrValue(),
@@ -111,8 +109,8 @@ func Test_getMetric(t *testing.T) {
 		},
 		{
 			name:    "counter success case",
-			request: fmt.Sprintf("/value/%s/%s", m3.Type(), m3.Name()),
-			storage: createStorage(t, []metric.Metric{m1, m2, m3}),
+			request: fmt.Sprintf("/value/%s/%s", m3.StrType(), m3.Name()),
+			storage: createStorage(t, []*metric.Metric{m1, m2, m3}),
 			want: want{
 				code: http.StatusOK,
 				body: m3.StrValue(),
@@ -120,8 +118,8 @@ func Test_getMetric(t *testing.T) {
 		},
 		{
 			name:    "request not existing metric",
-			request: fmt.Sprintf("/value/%s/%s", m2.Type(), m2.Name()),
-			storage: createStorage(t, []metric.Metric{m1, m3}),
+			request: fmt.Sprintf("/value/%s/%s", m2.StrType(), m2.Name()),
+			storage: createStorage(t, []*metric.Metric{m1, m3}),
 			want: want{
 				code: http.StatusNotFound,
 				body: "",
@@ -142,7 +140,7 @@ func Test_getMetric(t *testing.T) {
 	}
 }
 
-func createStorage(t *testing.T, metrics []metric.Metric) s.Storage {
+func createStorage(t *testing.T, metrics []*metric.Metric) s.Storage {
 	ms := memstorage.New()
 	for _, m := range metrics {
 		err := ms.Update(m)
