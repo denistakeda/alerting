@@ -10,13 +10,13 @@ import (
 )
 
 func Test_memstorage_ImplementsStorage(t *testing.T) {
-	var _ storage.Storage = (*memstorage)(nil)
+	var _ storage.Storage = (*Memstorage)(nil)
 }
 
 func Test_memstorage_Get(t *testing.T) {
 	m1 := metric.NewGauge("m1_name", 3.14)
 	type args struct {
-		metricType metric.MetricType
+		metricType metric.Type
 		metricName string
 	}
 	type want struct {
@@ -97,13 +97,13 @@ func Test_memstorage_Update(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := create(t, tt.metrics)
 			if err := m.Update(tt.args.updatedMetric); (err != nil) != tt.wantErr {
-				t.Errorf("memstorage.Update() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Memstorage.Update() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func create(t *testing.T, metrics []*metric.Metric) *memstorage {
+func create(t *testing.T, metrics []*metric.Metric) *Memstorage {
 	ms := New()
 	for _, m := range metrics {
 		err := ms.Update(m)

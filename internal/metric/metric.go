@@ -1,64 +1,61 @@
 package metric
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 )
 
-type MetricType int
+type Type string
 
 const (
-	Gauge = iota
-	Counter
+	Gauge   Type = "gauge"
+	Counter Type = "counter"
 )
 
-var ErrorIncompatibleTypes = errors.New("incompatible types")
-
 type Metric struct {
-	metricType   MetricType
-	name         string
-	gaugeValue   float64
-	counterValue int64
+	ID    string   `json:"name"`
+	MType Type     `json:"type"`
+	Value *float64 `json:"value,omitempty"`
+	Delta *int64   `json:"delta,omitempty"`
 }
 
 func NewGauge(name string, value float64) *Metric {
 	return &Metric{
-		metricType: Gauge,
-		name:       name,
-		gaugeValue: value,
+		MType: Gauge,
+		ID:    name,
+		Value: &value,
 	}
 }
 
 func NewCounter(name string, value int64) *Metric {
 	return &Metric{
-		metricType:   Counter,
-		name:         name,
-		counterValue: value,
+		MType: Counter,
+		ID:    name,
+		Delta: &value,
 	}
 }
 
-func (m *Metric) Type() MetricType {
-	return m.metricType
+func (m *Metric) Type() Type {
+	return m.MType
 }
 
 func (m *Metric) Name() string {
-	return m.name
+	return m.ID
 }
 
 func (m *Metric) StrValue() string {
-	switch m.metricType {
+	switch m.MType {
 	case Gauge:
-		return strconv.FormatFloat(m.gaugeValue, 'f', 3, 64)
+		return strconv.FormatFloat(*m.Value, 'f', 3, 64)
 	case Counter:
-		return strconv.FormatInt(m.counterValue, 10)
+		return strconv.FormatInt(*m.Delta, 10)
 	default:
 		return ""
 	}
 }
 
 func (m *Metric) StrType() string {
-	switch m.metricType {
+	switch m.MType {
 	case Gauge:
 		return "gauge"
 	case Counter:
@@ -75,27 +72,27 @@ func Update(old *Metric, new *Metric) *Metric {
 	if new == nil {
 		return old
 	}
-	if old.metricType != new.metricType {
+	if old.MType != new.MType {
 		return old
 	}
-	switch old.metricType {
+	switch old.MType {
 	case Gauge:
 		return new
 	case Counter:
-		return NewCounter(old.name, old.counterValue+new.counterValue)
+		return NewCounter(old.ID, *old.Delta+*new.Delta)
 	default:
 		// Should never happen
 		return old
 	}
 }
 
-func TypeFromString(str string) (MetricType, error) {
+func TypeFromString(str string) (Type, error) {
 	switch str {
 	case "gauge":
 		return Gauge, nil
 	case "counter":
 		return Counter, nil
 	default:
-		return -1, fmt.Errorf("unknown metric type: '%s'", str)
+		return "", fmt.Errorf("unknown metric type: '%s'", str)
 	}
 }

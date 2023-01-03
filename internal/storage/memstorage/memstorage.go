@@ -4,27 +4,27 @@ import (
 	"github.com/denistakeda/alerting/internal/metric"
 )
 
-type memstorage struct {
-	types map[metric.MetricType]map[string]*metric.Metric
+type Memstorage struct {
+	types map[metric.Type]map[string]*metric.Metric
 }
 
-func New() *memstorage {
-	return &memstorage{
-		types: make(map[metric.MetricType]map[string]*metric.Metric),
+func New() *Memstorage {
+	return &Memstorage{
+		types: make(map[metric.Type]map[string]*metric.Metric),
 	}
 }
 
-func (m *memstorage) Get(metricType metric.MetricType, metricName string) (*metric.Metric, bool) {
+func (m *Memstorage) Get(metricType metric.Type, metricName string) (*metric.Metric, bool) {
 	group, ok := m.types[metricType]
 	if !ok {
 		return nil, false
 	}
 
-	metric, ok := group[metricName]
-	return metric, ok
+	met, ok := group[metricName]
+	return met, ok
 }
 
-func (m *memstorage) Update(updatedMetric *metric.Metric) error {
+func (m *Memstorage) Update(updatedMetric *metric.Metric) error {
 	group, ok := m.types[updatedMetric.Type()]
 	if !ok {
 		group = make(map[string]*metric.Metric)
@@ -35,7 +35,7 @@ func (m *memstorage) Update(updatedMetric *metric.Metric) error {
 	return nil
 }
 
-func (m *memstorage) All() []*metric.Metric {
+func (m *Memstorage) All() []*metric.Metric {
 	res := []*metric.Metric{}
 	for _, group := range m.types {
 		for _, met := range group {

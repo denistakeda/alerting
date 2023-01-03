@@ -15,11 +15,11 @@ import (
 
 type mockStorage struct{}
 
-func (m *mockStorage) Get(metricType metric.MetricType, metricName string) (*metric.Metric, bool) {
+func (m *mockStorage) Get(_metricType metric.Type, _metricName string) (*metric.Metric, bool) {
 	return nil, false
 }
-func (m *mockStorage) Update(metric *metric.Metric) error { return nil }
-func (m *mockStorage) All() []*metric.Metric              { return []*metric.Metric{} }
+func (m *mockStorage) Update(_metric *metric.Metric) error { return nil }
+func (m *mockStorage) All() []*metric.Metric               { return []*metric.Metric{} }
 
 func Test_updateMetric(t *testing.T) {
 	tests := []struct {

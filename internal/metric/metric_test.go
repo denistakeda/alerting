@@ -7,12 +7,6 @@ import (
 )
 
 func TestMetric_StrValue(t *testing.T) {
-	type fields struct {
-		metricType   MetricType
-		name         string
-		gaugeValue   float64
-		counterValue int64
-	}
 	tests := []struct {
 		name   string
 		metric *Metric
