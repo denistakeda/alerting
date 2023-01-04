@@ -24,19 +24,20 @@ func (m *Memstorage) Get(metricType metric.Type, metricName string) (*metric.Met
 	return met, ok
 }
 
-func (m *Memstorage) Update(updatedMetric *metric.Metric) error {
+func (m *Memstorage) Update(updatedMetric *metric.Metric) (*metric.Metric, error) {
 	group, ok := m.types[updatedMetric.Type()]
 	if !ok {
 		group = make(map[string]*metric.Metric)
 		m.types[updatedMetric.Type()] = group
 	}
 
-	group[updatedMetric.Name()] = metric.Update(group[updatedMetric.Name()], updatedMetric)
-	return nil
+	res := metric.Update(group[updatedMetric.Name()], updatedMetric)
+	group[updatedMetric.Name()] = res
+	return res, nil
 }
 
 func (m *Memstorage) All() []*metric.Metric {
-	res := []*metric.Metric{}
+	var res []*metric.Metric
 	for _, group := range m.types {
 		for _, met := range group {
 			res = append(res, met)

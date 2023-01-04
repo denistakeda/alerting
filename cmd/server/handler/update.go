@@ -37,10 +37,30 @@ func (h *handler) UpdateMetricHandler(c *gin.Context) {
 		return
 	}
 
-	if err := h.storage.Update(m); err != nil {
+	if _, err := h.storage.Update(m); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 	}
 	c.Status(http.StatusOK)
+}
+
+func (h *handler) UpdateMetricHandler2(c *gin.Context) {
+	var m metric.Metric
+	if err := c.ShouldBind(&m); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	if err := m.Validate(); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	updatedMetric, err := h.storage.Update(&m)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, updatedMetric)
 }
 
 func createMetric(uri updateMetricURI) (*metric.Metric, error) {

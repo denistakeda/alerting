@@ -96,7 +96,7 @@ func Test_memstorage_Update(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := create(t, tt.metrics)
-			if err := m.Update(tt.args.updatedMetric); (err != nil) != tt.wantErr {
+			if _, err := m.Update(tt.args.updatedMetric); (err != nil) != tt.wantErr {
 				t.Errorf("Memstorage.Update() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -106,7 +106,7 @@ func Test_memstorage_Update(t *testing.T) {
 func create(t *testing.T, metrics []*metric.Metric) *Memstorage {
 	ms := New()
 	for _, m := range metrics {
-		err := ms.Update(m)
+		_, err := ms.Update(m)
 		require.NoError(t, err)
 	}
 	return ms

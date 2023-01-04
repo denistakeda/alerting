@@ -65,6 +65,22 @@ func (m *Metric) StrType() string {
 	}
 }
 
+func (m *Metric) Validate() error {
+	switch m.MType {
+	case Gauge:
+		if m.Value == nil {
+			return fmt.Errorf("metric should have a 'value' field for type 'gauge'")
+		}
+	case Counter:
+		if m.Delta == nil {
+			return fmt.Errorf("metric should have a 'delta' field for type 'counter'")
+		}
+	default:
+		return fmt.Errorf("unknown metric type: '%s'", m.MType)
+	}
+	return nil
+}
+
 func Update(old *Metric, new *Metric) *Metric {
 	if old == nil {
 		return new

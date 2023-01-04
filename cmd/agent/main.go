@@ -73,7 +73,7 @@ func registerMetrics(memStats *runtime.MemStats, store storage.Storage) {
 }
 
 func registerMetric(store storage.Storage, m *metric.Metric) {
-	err := store.Update(m)
+	_, err := store.Update(m)
 	if err != nil {
 		log.Printf("Failed to update metric %v\n", m)
 	}

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -18,8 +20,8 @@ type mockStorage struct{}
 func (m *mockStorage) Get(_metricType metric.Type, _metricName string) (*metric.Metric, bool) {
 	return nil, false
 }
-func (m *mockStorage) Update(_metric *metric.Metric) error { return nil }
-func (m *mockStorage) All() []*metric.Metric               { return []*metric.Metric{} }
+func (m *mockStorage) Update(_metric *metric.Metric) (*metric.Metric, error) { return nil, nil }
+func (m *mockStorage) All() []*metric.Metric                                 { return []*metric.Metric{} }
 
 func Test_updateMetric(t *testing.T) {
 	tests := []struct {
@@ -140,10 +142,75 @@ func Test_getMetric(t *testing.T) {
 	}
 }
 
+func Test_update(t *testing.T) {
+
+	g1 := metric.NewGauge("gauge1", 3.14)
+	//g2 := metric.NewGauge("gauge2", 5.18)
+	c3 := metric.NewCounter("counter1", 7)
+
+	type want struct {
+		code int
+		body []byte
+	}
+	tests := []struct {
+		name        string
+		requestBody []byte
+		storage     s.Storage
+		want        want
+	}{
+		{
+			name:        "not existing gauge",
+			requestBody: marshal(t, g1),
+			storage:     createStorage(t, make([]*metric.Metric, 0)),
+			want: want{
+				code: http.StatusOK,
+				body: marshal(t, g1),
+			},
+		},
+		{
+			name:        "not existing counter",
+			requestBody: marshal(t, c3),
+			storage:     createStorage(t, make([]*metric.Metric, 0)),
+			want: want{
+				code: http.StatusOK,
+				body: marshal(t, c3),
+			},
+		},
+		{
+			name:        "existing counter",
+			requestBody: marshal(t, c3),
+			storage:     createStorage(t, []*metric.Metric{c3}),
+			want: want{
+				code: http.StatusOK,
+				body: marshal(t, metric.NewCounter(c3.Name(), 14)),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			router := setupRouter(tt.storage)
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("POST", "/update", bytes.NewBuffer(tt.requestBody))
+			req.Header.Set("Content-Type", "application/json")
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.want.code, w.Code)
+			assert.JSONEq(t, string(tt.want.body), w.Body.String())
+		})
+	}
+}
+
+func marshal(t *testing.T, v any) []byte {
+	res, err := json.Marshal(v)
+	require.NoError(t, err)
+	return res
+}
+
 func createStorage(t *testing.T, metrics []*metric.Metric) s.Storage {
 	ms := memstorage.New()
 	for _, m := range metrics {
-		err := ms.Update(m)
+		_, err := ms.Update(m)
 		require.NoError(t, err)
 	}
 	return ms

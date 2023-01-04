@@ -21,6 +21,7 @@ func setupRouter(storage s.Storage) *gin.Engine {
 	h := handler.New(storage)
 
 	r.POST("/update/:metric_type/:metric_name/:metric_value", h.UpdateMetricHandler)
+	r.POST("/update", h.UpdateMetricHandler2)
 	r.GET("/value/:metric_type/:metric_name", h.GetMetricHandler)
 	r.GET("/", h.MainPageHandler)
 	return r
