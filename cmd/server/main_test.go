@@ -168,6 +168,15 @@ func Test_update(t *testing.T) {
 			},
 		},
 		{
+			name:        "existing gauge",
+			requestBody: marshal(t, metric.NewGauge(g1.Name(), 5.18)),
+			storage:     createStorage(t, []*metric.Metric{g1}),
+			want: want{
+				code: http.StatusOK,
+				body: marshal(t, metric.NewGauge(g1.Name(), 5.18)),
+			},
+		},
+		{
 			name:        "not existing counter",
 			requestBody: marshal(t, c3),
 			storage:     createStorage(t, make([]*metric.Metric, 0)),
@@ -191,7 +200,7 @@ func Test_update(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			router := setupRouter(tt.storage)
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("POST", "/update", bytes.NewBuffer(tt.requestBody))
+			req, _ := http.NewRequest("POST", "/update/", bytes.NewBuffer(tt.requestBody))
 			req.Header.Set("Content-Type", "application/json")
 			router.ServeHTTP(w, req)
 

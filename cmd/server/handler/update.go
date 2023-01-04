@@ -44,7 +44,7 @@ func (h *handler) UpdateMetricHandler(c *gin.Context) {
 }
 
 func (h *handler) UpdateMetricHandler2(c *gin.Context) {
-	var m metric.Metric
+	var m *metric.Metric
 	if err := c.ShouldBind(&m); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
@@ -54,13 +54,13 @@ func (h *handler) UpdateMetricHandler2(c *gin.Context) {
 		return
 	}
 
-	updatedMetric, err := h.storage.Update(&m)
+	m, err := h.storage.Update(m)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, updatedMetric)
+	c.JSON(http.StatusOK, m)
 }
 
 func createMetric(uri updateMetricURI) (*metric.Metric, error) {

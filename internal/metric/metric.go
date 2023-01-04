@@ -13,7 +13,7 @@ const (
 )
 
 type Metric struct {
-	ID    string   `json:"name"`
+	ID    string   `json:"id"`
 	MType Type     `json:"type"`
 	Value *float64 `json:"value,omitempty"`
 	Delta *int64   `json:"delta,omitempty"`

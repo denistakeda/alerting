@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -33,9 +34,15 @@ func main() {
 	}()
 
 	// Send metrics
+	client := &http.Client{
+		Transport: &http.Transport{
+			MaxIdleConns:    20,
+			MaxConnsPerHost: 20,
+		},
+	}
 	reportTicker := time.NewTicker(ReportInterval)
 	for range reportTicker.C {
-		sendMetrics(memStorage.All(), "http://127.0.0.1:8080")
+		sendMetrics(client, memStorage.All(), "http://127.0.0.1:8080")
 	}
 }
 
@@ -55,7 +62,7 @@ func registerMetrics(memStats *runtime.MemStats, store storage.Storage) {
 	registerMetric(store, metric.NewGauge("Lookups", float64(memStats.Lookups)))
 	registerMetric(store, metric.NewGauge("MCacheInuse", float64(memStats.MCacheInuse)))
 	registerMetric(store, metric.NewGauge("MCacheSys", float64(memStats.MCacheSys)))
-	registerMetric(store, metric.NewGauge("MSpanInUse", float64(memStats.MSpanInuse)))
+	registerMetric(store, metric.NewGauge("MSpanInuse", float64(memStats.MSpanInuse)))
 	registerMetric(store, metric.NewGauge("MSpanSys", float64(memStats.MSpanSys)))
 	registerMetric(store, metric.NewGauge("Mallocs", float64(memStats.Mallocs)))
 	registerMetric(store, metric.NewGauge("NextGC", float64(memStats.NextGC)))
@@ -79,18 +86,25 @@ func registerMetric(store storage.Storage, m *metric.Metric) {
 	}
 }
 
-func sendMetrics(metrics []*metric.Metric, server string) {
+func sendMetrics(client *http.Client, metrics []*metric.Metric, server string) {
+	startTime := time.Now()
 	for _, m := range metrics {
-		met := m
-		go func() {
-			url := fmt.Sprintf("%s/update/%s/%s", server, met.StrType(), met.Name())
-			body := bytes.NewBuffer([]byte(met.StrValue()))
-			resp, err := http.Post(url, "text/plain", body)
+		m := m
+		func() {
+			url := fmt.Sprintf("%s/update/", server)
+			m, err := json.Marshal(m)
 			if err != nil {
-				fmt.Printf("Unable to file a request to URL: %s, error: %v\n", url, err)
+				log.Printf("failed to marshal metric: %v\n", m)
+			}
+			body := bytes.NewBuffer(m)
+			resp, err := client.Post(url, "application/json", body)
+			if err != nil {
+				log.Printf("unable to file a request to URL: %s, error: %v\n", url, err)
 				return
 			}
-			defer resp.Body.Close()
+			resp.Body.Close()
 		}()
 	}
+	now := time.Now()
+	log.Printf("successfully updated %d metrics in %f seconds", len(metrics), now.Sub(startTime).Seconds())
 }
