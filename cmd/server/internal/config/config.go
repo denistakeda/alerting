@@ -11,7 +11,7 @@ type Config struct {
 
 func GetConfig() (Config, error) {
 	config := Config{
-		Address: "127.0.0.1:8080",
+		Address: "localhost:8080",
 	}
 	if err := env.Parse(&config); err != nil {
 		return Config{}, errors.Wrap(err, "failed to parse server configuration from the environment variables")
