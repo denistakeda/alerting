@@ -26,7 +26,7 @@ func main() {
 	memStorage := memstorage.New()
 
 	// Update metrics
-	pollTicker := time.NewTicker(time.Duration(conf.PollInterval) * time.Second)
+	pollTicker := time.NewTicker(conf.PollInterval)
 	go func() {
 		for range pollTicker.C {
 			runtime.ReadMemStats(mem)
@@ -41,7 +41,7 @@ func main() {
 			MaxConnsPerHost: 20,
 		},
 	}
-	reportTicker := time.NewTicker(time.Duration(conf.ReportInterval) * time.Second)
+	reportTicker := time.NewTicker(conf.ReportInterval)
 	for range reportTicker.C {
 		sendMetrics(client, memStorage.All(), conf.Address)
 	}
