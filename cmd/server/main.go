@@ -1,17 +1,25 @@
 package main
 
 import (
-	"github.com/denistakeda/alerting/cmd/server/handler"
+	"github.com/denistakeda/alerting/cmd/server/internal/config"
+	"github.com/denistakeda/alerting/cmd/server/internal/handler"
 	s "github.com/denistakeda/alerting/internal/storage"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
 	"github.com/gin-gonic/gin"
+	"log"
 )
 
 func main() {
+	conf, err := config.GetConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("configuration: %v", conf)
+
 	storage := memstorage.New()
 	r := setupRouter(storage)
 	r.LoadHTMLGlob("cmd/server/templates/*")
-	r.Run()
+	log.Fatal(r.Run(conf.Address))
 }
 
 func setupRouter(storage s.Storage) *gin.Engine {

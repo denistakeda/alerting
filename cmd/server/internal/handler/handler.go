@@ -4,12 +4,12 @@ import (
 	s "github.com/denistakeda/alerting/internal/storage"
 )
 
-type handler struct {
+type Handler struct {
 	storage s.Storage
 }
 
-func New(storage s.Storage) *handler {
-	return &handler{
+func New(storage s.Storage) *Handler {
+	return &Handler{
 		storage: storage,
 	}
 }

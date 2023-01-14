@@ -25,7 +25,7 @@ func metricsToRepresentation(metrics []*metric.Metric) []met {
 	return ms
 }
 
-func (h *handler) MainPageHandler(c *gin.Context) {
+func (h *Handler) MainPageHandler(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.tmpl", gin.H{
 		"Metrics": metricsToRepresentation(h.storage.All()),
 	})
