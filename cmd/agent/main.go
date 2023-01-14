@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/denistakeda/alerting/cmd/agent/internal/config"
 	"log"
 	"math/rand"
 	"net/http"
@@ -15,17 +16,17 @@ import (
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
 )
 
-const (
-	PollInterval   = 2 * time.Second
-	ReportInterval = 10 * time.Second
-)
-
 func main() {
+	conf, err := config.GetConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("configuration: %v", conf)
 	mem := &runtime.MemStats{}
 	memStorage := memstorage.New()
 
 	// Update metrics
-	pollTicker := time.NewTicker(PollInterval)
+	pollTicker := time.NewTicker(time.Duration(conf.PollInterval) * time.Second)
 	go func() {
 		for range pollTicker.C {
 			runtime.ReadMemStats(mem)
@@ -40,9 +41,9 @@ func main() {
 			MaxConnsPerHost: 20,
 		},
 	}
-	reportTicker := time.NewTicker(ReportInterval)
+	reportTicker := time.NewTicker(time.Duration(conf.ReportInterval) * time.Second)
 	for range reportTicker.C {
-		sendMetrics(client, memStorage.All(), "http://127.0.0.1:8080")
+		sendMetrics(client, memStorage.All(), conf.Address)
 	}
 }
 
