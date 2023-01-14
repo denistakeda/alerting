@@ -20,7 +20,7 @@ type updateMetricURI struct {
 	MetricValue string `uri:"metric_value" binding:"required"`
 }
 
-func (h *handler) UpdateMetricHandler(c *gin.Context) {
+func (h *Handler) UpdateMetricHandler(c *gin.Context) {
 	var uri updateMetricURI
 	if err := c.ShouldBindUri(&uri); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
@@ -43,7 +43,7 @@ func (h *handler) UpdateMetricHandler(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func (h *handler) UpdateMetricHandler2(c *gin.Context) {
+func (h *Handler) UpdateMetricHandler2(c *gin.Context) {
 	var m *metric.Metric
 	if err := c.ShouldBind(&m); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
