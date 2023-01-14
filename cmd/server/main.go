@@ -18,7 +18,7 @@ func main() {
 
 	storage := memstorage.New()
 	r := setupRouter(storage)
-	r.LoadHTMLGlob("cmd/server/templates/*")
+	r.LoadHTMLGlob("cmd/server/internal/templates/*")
 	log.Fatal(r.Run(conf.Address))
 }
 
