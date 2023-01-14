@@ -1,8 +1,10 @@
 package config
 
 import (
+	"fmt"
 	"github.com/caarlos0/env/v6"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 type Config struct {
@@ -19,6 +21,10 @@ func GetConfig() (Config, error) {
 	}
 	if err := env.Parse(&config); err != nil {
 		return Config{}, errors.Wrap(err, "failed to parse agent configuration from the environment variables")
+	}
+
+	if !strings.HasPrefix(config.Address, "http") {
+		config.Address = fmt.Sprintf("http://%s", config.Address)
 	}
 
 	return config, nil
