@@ -5,6 +5,7 @@ import (
 	"github.com/denistakeda/alerting/cmd/server/internal/handler"
 	s "github.com/denistakeda/alerting/internal/storage"
 	"github.com/denistakeda/alerting/internal/storage/filestorage"
+	"github.com/denistakeda/alerting/internal/storage/memstorage"
 	"github.com/gin-gonic/gin"
 	"log"
 )
@@ -16,10 +17,7 @@ func main() {
 	}
 	log.Printf("configuration: %v", conf)
 
-	storage, err := filestorage.New(conf.StoreFile, conf.StoreInterval, conf.Restore)
-	if err != nil {
-		log.Fatal(err)
-	}
+	storage := getStorage(conf)
 
 	r := setupRouter(storage)
 	r.LoadHTMLGlob("cmd/server/internal/templates/*")
@@ -38,4 +36,16 @@ func setupRouter(storage s.Storage) *gin.Engine {
 	r.GET("/value/:metric_type/:metric_name", h.GetMetricHandler)
 	r.GET("/", h.MainPageHandler)
 	return r
+}
+
+func getStorage(conf config.Config) s.Storage {
+	if conf.StoreFile == "" {
+		return memstorage.New()
+	} else {
+		storage, err := filestorage.New(conf.StoreFile, conf.StoreInterval, conf.Restore)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return storage
+	}
 }
