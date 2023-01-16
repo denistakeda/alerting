@@ -8,6 +8,8 @@ import (
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
 	"github.com/gin-gonic/gin"
 	"log"
+	"os"
+	"os/signal"
 )
 
 func main() {
@@ -21,7 +23,17 @@ func main() {
 
 	r := setupRouter(storage)
 	r.LoadHTMLGlob("cmd/server/internal/templates/*")
-	log.Fatal(r.Run(conf.Address))
+	serverChan := runServer(r, conf.Address)
+	interruptChan := handleInterrupt()
+	select {
+	case serverError := <-serverChan:
+		log.Fatal(serverError)
+	case <-interruptChan:
+		if err := storage.Close(); err != nil {
+			log.Printf("Unable to properly stop the storage: %v\n", err)
+		}
+		log.Fatal("Program was interrupted")
+	}
 }
 
 func setupRouter(storage s.Storage) *gin.Engine {
@@ -36,6 +48,21 @@ func setupRouter(storage s.Storage) *gin.Engine {
 	r.GET("/value/:metric_type/:metric_name", h.GetMetricHandler)
 	r.GET("/", h.MainPageHandler)
 	return r
+}
+
+func runServer(r *gin.Engine, address string) <-chan error {
+	out := make(chan error)
+	go func() {
+		err := r.Run(address)
+		out <- err
+	}()
+	return out
+}
+
+func handleInterrupt() <-chan os.Signal {
+	out := make(chan os.Signal, 2)
+	signal.Notify(out, os.Interrupt)
+	return out
 }
 
 func getStorage(conf config.Config) s.Storage {
