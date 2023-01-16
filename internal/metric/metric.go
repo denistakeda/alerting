@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 )
@@ -79,6 +80,14 @@ func (m *Metric) Validate() error {
 		return fmt.Errorf("unknown metric type: '%s'", m.MType)
 	}
 	return nil
+}
+
+func (m *Metric) String() string {
+	res, err := json.Marshal(m)
+	if err != nil {
+		return "error" // should never happen
+	}
+	return string(res)
 }
 
 func Update(old *Metric, new *Metric) *Metric {

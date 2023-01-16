@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -27,12 +28,15 @@ func main() {
 	interruptChan := handleInterrupt()
 	select {
 	case serverError := <-serverChan:
-		log.Fatal(serverError)
+		if err := storage.Close(); err != nil {
+			log.Printf("Unable to properly stop the storage: %v\n", err)
+		}
+		log.Println(serverError)
 	case <-interruptChan:
 		if err := storage.Close(); err != nil {
 			log.Printf("Unable to properly stop the storage: %v\n", err)
 		}
-		log.Fatal("Program was interrupted")
+		log.Println("Program was interrupted")
 	}
 }
 
@@ -62,6 +66,7 @@ func runServer(r *gin.Engine, address string) <-chan error {
 func handleInterrupt() <-chan os.Signal {
 	out := make(chan os.Signal, 2)
 	signal.Notify(out, os.Interrupt)
+	signal.Notify(out, syscall.SIGTERM)
 	return out
 }
 
