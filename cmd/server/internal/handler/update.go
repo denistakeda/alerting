@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -49,6 +50,7 @@ func (h *Handler) UpdateMetricHandler2(c *gin.Context) {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
+	log.Printf("UpdateMetricHandler2: request: %v, response: ", m)
 	if err := m.Validate(); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
@@ -60,6 +62,7 @@ func (h *Handler) UpdateMetricHandler2(c *gin.Context) {
 		return
 	}
 
+	log.Printf("%v\n", m)
 	c.JSON(http.StatusOK, m)
 }
 

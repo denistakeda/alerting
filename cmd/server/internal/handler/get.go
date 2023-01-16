@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/denistakeda/alerting/internal/metric"
@@ -38,10 +39,13 @@ func (h *Handler) GetMetricHandler2(c *gin.Context) {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
+	log.Printf("GetMetricHandler2: request: %v, response: ", requestMetric)
 	m, ok := h.storage.Get(requestMetric.Type(), requestMetric.Name())
 	if !ok {
+		log.Printf("%v\n", requestMetric)
 		c.AbortWithStatusJSON(http.StatusNotFound, requestMetric)
 		return
 	}
+	log.Printf("%v\n", m)
 	c.JSON(http.StatusOK, m)
 }
