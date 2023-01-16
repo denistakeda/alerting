@@ -112,8 +112,6 @@ func (fs *Filestorage) restore() error {
 		if err != nil {
 			return errors.Wrapf(err, "Failestorage: failed to restore data from file %s", fs.storeFile)
 		}
-		if _, err := fs.mstorage.Update(&m); err != nil {
-			return errors.Wrapf(err, "Failestorage: failed to restore data from file %s", fs.storeFile)
-		}
+		fs.mstorage.Replace(&m)
 	}
 }
