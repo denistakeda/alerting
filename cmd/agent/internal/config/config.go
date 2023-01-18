@@ -1,6 +1,7 @@
 package config
 
 import (
+	"flag"
 	"fmt"
 	"github.com/caarlos0/env/v6"
 	"github.com/pkg/errors"
@@ -15,15 +16,20 @@ type Config struct {
 }
 
 func GetConfig() (Config, error) {
-	config := Config{
-		Address:        "localhost:8080",
-		ReportInterval: 10 * time.Second,
-		PollInterval:   2 * time.Second,
-	}
+	config := Config{}
+
+	// Get flags
+	flag.StringVar(&config.Address, "a", "http://localhost:8080", "Server to send metrics to")
+	flag.DurationVar(&config.ReportInterval, "r", 10*time.Second, "Interval to send metrics to server")
+	flag.DurationVar(&config.PollInterval, "p", 2*time.Second, "Interval to collect metrics")
+	flag.Parse()
+
+	// Populate data from the env variables
 	if err := env.Parse(&config); err != nil {
 		return Config{}, errors.Wrap(err, "failed to parse agent configuration from the environment variables")
 	}
 
+	// Validation and post-processing
 	if !strings.HasPrefix(config.Address, "http") {
 		config.Address = fmt.Sprintf("http://%s", config.Address)
 	}
