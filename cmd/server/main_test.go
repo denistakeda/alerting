@@ -22,6 +22,7 @@ func (m *mockStorage) Get(_metricType metric.Type, _metricName string) (*metric.
 }
 func (m *mockStorage) Update(_metric *metric.Metric) (*metric.Metric, error) { return nil, nil }
 func (m *mockStorage) All() []*metric.Metric                                 { return []*metric.Metric{} }
+func (m *mockStorage) Close() error                                          { return nil }
 
 func Test_updateMetric(t *testing.T) {
 	tests := []struct {

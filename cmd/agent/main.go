@@ -100,10 +100,13 @@ func sendMetrics(client *http.Client, metrics []*metric.Metric, server string) {
 			body := bytes.NewBuffer(m)
 			resp, err := client.Post(url, "application/json", body)
 			if err != nil {
-				log.Printf("unable to file a request to URL: %s, error: %v\n", url, err)
+				log.Printf("unable to file a request to URL: %s, error: %v, metric: %v\n", url, err, string(m))
 				return
 			}
-			resp.Body.Close()
+			if err := resp.Body.Close(); err != nil {
+				log.Print("unable to close a body")
+				return
+			}
 		}()
 	}
 	now := time.Now()

@@ -44,6 +44,18 @@ func (m *Memstorage) Update(updatedMetric *metric.Metric) (*metric.Metric, error
 	return res, nil
 }
 
+func (m *Memstorage) Replace(met *metric.Metric) {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+
+	group, ok := m.types[met.Type()]
+	if !ok {
+		group = make(map[string]*metric.Metric)
+		m.types[met.Type()] = group
+	}
+	group[met.Name()] = met
+}
+
 func (m *Memstorage) All() []*metric.Metric {
 	m.mx.Lock()
 	defer m.mx.Unlock()
@@ -55,4 +67,9 @@ func (m *Memstorage) All() []*metric.Metric {
 		}
 	}
 	return res
+}
+
+func (m *Memstorage) Close() error {
+	// For memory storage there is no need to do anything on close
+	return nil
 }
