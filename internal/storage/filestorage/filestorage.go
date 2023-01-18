@@ -103,8 +103,8 @@ func (fs *Filestorage) restore() error {
 		}
 	}()
 	decoder := json.NewDecoder(file)
-	var m metric.Metric
 	for {
+		var m metric.Metric
 		err := decoder.Decode(&m)
 		if err == io.EOF {
 			return nil
