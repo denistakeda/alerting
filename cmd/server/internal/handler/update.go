@@ -11,8 +11,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var ErrUnknownMetricType = errors.New("unknown metric type")
-var ErrIncorrectValue = errors.New("incorrect metric value")
+var (
+	ErrUnknownMetricType = errors.New("unknown metric type")
+	ErrIncorrectValue    = errors.New("incorrect metric value")
+)
 
 type updateMetricURI struct {
 	MetricType  string `uri:"metric_type" binding:"required"`
