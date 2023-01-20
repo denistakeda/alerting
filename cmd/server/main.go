@@ -6,6 +6,7 @@ import (
 	s "github.com/denistakeda/alerting/internal/storage"
 	"github.com/denistakeda/alerting/internal/storage/filestorage"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"log"
 	"os"
@@ -43,6 +44,7 @@ func main() {
 func setupRouter(storage s.Storage) *gin.Engine {
 	r := gin.Default()
 	r.RedirectTrailingSlash = false
+	r.Use(gzip.Gzip(gzip.DefaultCompression))
 
 	h := handler.New(storage)
 
