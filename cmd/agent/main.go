@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/denistakeda/alerting/cmd/agent/internal/config"
+	"github.com/denistakeda/alerting/internal/config/agentcfg"
 	"log"
 	"math/rand"
 	"net/http"
@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	conf, err := config.GetConfig()
+	conf, err := agentcfg.GetConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
