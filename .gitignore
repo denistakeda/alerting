@@ -13,7 +13,7 @@
 
 # Binaries
 cmd/agent/main
-cmd/agent/agent
+internal/agent
 cmd/server/main
 cmd/server/server
 

@@ -2,54 +2,74 @@ package memstorage
 
 import (
 	"github.com/denistakeda/alerting/internal/metric"
+	"sync"
 )
 
-type memstorage struct {
-	types map[string]map[string]metric.Metric
-	size  int
+type Memstorage struct {
+	types map[metric.Type]map[string]*metric.Metric
+	mx    sync.Mutex
 }
 
-func New() *memstorage {
-	return &memstorage{
-		types: make(map[string]map[string]metric.Metric),
-		size:  0,
+func New() *Memstorage {
+	return &Memstorage{
+		types: make(map[metric.Type]map[string]*metric.Metric),
 	}
 }
 
-func (m *memstorage) Get(metricType string, metricName string) (metric.Metric, bool) {
+func (m *Memstorage) Get(metricType metric.Type, metricName string) (*metric.Metric, bool) {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+
 	group, ok := m.types[metricType]
 	if !ok {
 		return nil, false
 	}
 
-	metric, ok := group[metricName]
-	return metric, ok
+	met, ok := group[metricName]
+	return met, ok
 }
 
-func (m *memstorage) Update(updatedMetric metric.Metric) error {
+func (m *Memstorage) Update(updatedMetric *metric.Metric) (*metric.Metric, error) {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+
 	group, ok := m.types[updatedMetric.Type()]
 	if !ok {
-		group = make(map[string]metric.Metric)
+		group = make(map[string]*metric.Metric)
 		m.types[updatedMetric.Type()] = group
 	}
 
-	oldMetric, ok := group[updatedMetric.Name()]
-	if !ok {
-		group[updatedMetric.Name()] = updatedMetric
-		m.size++
-		return nil
-	}
-	return oldMetric.UpdateValue(updatedMetric.Value())
+	res := metric.Update(group[updatedMetric.Name()], updatedMetric)
+	group[updatedMetric.Name()] = res
+	return res, nil
 }
 
-func (m *memstorage) All() []metric.Metric {
-	res := make([]metric.Metric, m.size)
-	i := 0
+func (m *Memstorage) Replace(met *metric.Metric) {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+
+	group, ok := m.types[met.Type()]
+	if !ok {
+		group = make(map[string]*metric.Metric)
+		m.types[met.Type()] = group
+	}
+	group[met.Name()] = met
+}
+
+func (m *Memstorage) All() []*metric.Metric {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+
+	var res []*metric.Metric
 	for _, group := range m.types {
 		for _, met := range group {
-			res[i] = met
-			i++
+			res = append(res, met)
 		}
 	}
 	return res
+}
+
+func (m *Memstorage) Close() error {
+	// For memory storage there is no need to do anything on close
+	return nil
 }

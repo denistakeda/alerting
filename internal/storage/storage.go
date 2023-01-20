@@ -5,7 +5,8 @@ import (
 )
 
 type Storage interface {
-	Get(metricType string, metricName string) (metric.Metric, bool)
-	Update(metric metric.Metric) error
-	All() []metric.Metric
+	Get(metricType metric.Type, metricName string) (*metric.Metric, bool)
+	Update(metric *metric.Metric) (*metric.Metric, error)
+	All() []*metric.Metric
+	Close() error
 }

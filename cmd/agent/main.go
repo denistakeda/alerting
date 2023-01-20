@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"github.com/denistakeda/alerting/internal/config/agentcfg"
 	"log"
 	"math/rand"
 	"net/http"
@@ -10,23 +12,21 @@ import (
 	"time"
 
 	"github.com/denistakeda/alerting/internal/metric"
-	"github.com/denistakeda/alerting/internal/metric/counter"
-	"github.com/denistakeda/alerting/internal/metric/gauge"
 	"github.com/denistakeda/alerting/internal/storage"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
 )
 
-const (
-	PollInterval   = 2 * time.Second
-	ReportInterval = 10 * time.Second
-)
-
 func main() {
+	conf, err := agentcfg.GetConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("configuration: %v", conf)
 	mem := &runtime.MemStats{}
 	memStorage := memstorage.New()
 
 	// Update metrics
-	pollTicker := time.NewTicker(PollInterval)
+	pollTicker := time.NewTicker(conf.PollInterval)
 	go func() {
 		for range pollTicker.C {
 			runtime.ReadMemStats(mem)
@@ -35,64 +35,80 @@ func main() {
 	}()
 
 	// Send metrics
-	reportTicker := time.NewTicker(ReportInterval)
+	client := &http.Client{
+		Transport: &http.Transport{
+			MaxIdleConns:    20,
+			MaxConnsPerHost: 20,
+		},
+	}
+	reportTicker := time.NewTicker(conf.ReportInterval)
 	for range reportTicker.C {
-		sendMetrics(memStorage.All(), "http://127.0.0.1:8080")
+		sendMetrics(client, memStorage.All(), conf.Address)
 	}
 }
 
 func registerMetrics(memStats *runtime.MemStats, store storage.Storage) {
-	registerMetric(store, gauge.New("Alloc", float64(memStats.Alloc)))
-	registerMetric(store, gauge.New("BuckHashSys", float64(memStats.BuckHashSys)))
-	registerMetric(store, gauge.New("Frees", float64(memStats.Frees)))
-	registerMetric(store, gauge.New("GCCPUFraction", float64(memStats.GCCPUFraction)))
-	registerMetric(store, gauge.New("GCSys", float64(memStats.GCSys)))
-	registerMetric(store, gauge.New("HeapAlloc", float64(memStats.HeapAlloc)))
-	registerMetric(store, gauge.New("HeapIdle", float64(memStats.HeapIdle)))
-	registerMetric(store, gauge.New("HeapInuse", float64(memStats.HeapInuse)))
-	registerMetric(store, gauge.New("HeapObjects", float64(memStats.HeapObjects)))
-	registerMetric(store, gauge.New("HeapReleased", float64(memStats.HeapReleased)))
-	registerMetric(store, gauge.New("HeapSys", float64(memStats.HeapSys)))
-	registerMetric(store, gauge.New("LastGC", float64(memStats.LastGC)))
-	registerMetric(store, gauge.New("Lookups", float64(memStats.Lookups)))
-	registerMetric(store, gauge.New("MCacheInuse", float64(memStats.MCacheInuse)))
-	registerMetric(store, gauge.New("MCacheSys", float64(memStats.MCacheSys)))
-	registerMetric(store, gauge.New("MSpanInUse", float64(memStats.MSpanInuse)))
-	registerMetric(store, gauge.New("MSpanSys", float64(memStats.MSpanSys)))
-	registerMetric(store, gauge.New("Mallocs", float64(memStats.Mallocs)))
-	registerMetric(store, gauge.New("NextGC", float64(memStats.NextGC)))
-	registerMetric(store, gauge.New("NumForcedGC", float64(memStats.NumForcedGC)))
-	registerMetric(store, gauge.New("NumGC", float64(memStats.NumGC)))
-	registerMetric(store, gauge.New("OtherSys", float64(memStats.OtherSys)))
-	registerMetric(store, gauge.New("PauseTotalNs", float64(memStats.PauseTotalNs)))
-	registerMetric(store, gauge.New("StackInuse", float64(memStats.StackInuse)))
-	registerMetric(store, gauge.New("StackSys", float64(memStats.StackSys)))
-	registerMetric(store, gauge.New("Sys", float64(memStats.Sys)))
-	registerMetric(store, gauge.New("TotalAlloc", float64(memStats.TotalAlloc)))
+	registerMetric(store, metric.NewGauge("Alloc", float64(memStats.Alloc)))
+	registerMetric(store, metric.NewGauge("BuckHashSys", float64(memStats.BuckHashSys)))
+	registerMetric(store, metric.NewGauge("Frees", float64(memStats.Frees)))
+	registerMetric(store, metric.NewGauge("GCCPUFraction", float64(memStats.GCCPUFraction)))
+	registerMetric(store, metric.NewGauge("GCSys", float64(memStats.GCSys)))
+	registerMetric(store, metric.NewGauge("HeapAlloc", float64(memStats.HeapAlloc)))
+	registerMetric(store, metric.NewGauge("HeapIdle", float64(memStats.HeapIdle)))
+	registerMetric(store, metric.NewGauge("HeapInuse", float64(memStats.HeapInuse)))
+	registerMetric(store, metric.NewGauge("HeapObjects", float64(memStats.HeapObjects)))
+	registerMetric(store, metric.NewGauge("HeapReleased", float64(memStats.HeapReleased)))
+	registerMetric(store, metric.NewGauge("HeapSys", float64(memStats.HeapSys)))
+	registerMetric(store, metric.NewGauge("LastGC", float64(memStats.LastGC)))
+	registerMetric(store, metric.NewGauge("Lookups", float64(memStats.Lookups)))
+	registerMetric(store, metric.NewGauge("MCacheInuse", float64(memStats.MCacheInuse)))
+	registerMetric(store, metric.NewGauge("MCacheSys", float64(memStats.MCacheSys)))
+	registerMetric(store, metric.NewGauge("MSpanInuse", float64(memStats.MSpanInuse)))
+	registerMetric(store, metric.NewGauge("MSpanSys", float64(memStats.MSpanSys)))
+	registerMetric(store, metric.NewGauge("Mallocs", float64(memStats.Mallocs)))
+	registerMetric(store, metric.NewGauge("NextGC", float64(memStats.NextGC)))
+	registerMetric(store, metric.NewGauge("NumForcedGC", float64(memStats.NumForcedGC)))
+	registerMetric(store, metric.NewGauge("NumGC", float64(memStats.NumGC)))
+	registerMetric(store, metric.NewGauge("OtherSys", float64(memStats.OtherSys)))
+	registerMetric(store, metric.NewGauge("PauseTotalNs", float64(memStats.PauseTotalNs)))
+	registerMetric(store, metric.NewGauge("StackInuse", float64(memStats.StackInuse)))
+	registerMetric(store, metric.NewGauge("StackSys", float64(memStats.StackSys)))
+	registerMetric(store, metric.NewGauge("Sys", float64(memStats.Sys)))
+	registerMetric(store, metric.NewGauge("TotalAlloc", float64(memStats.TotalAlloc)))
 
-	registerMetric(store, counter.New("PollCount", 1))
-	registerMetric(store, gauge.New("RandomValue", float64(rand.Int())))
+	registerMetric(store, metric.NewCounter("PollCount", 1))
+	registerMetric(store, metric.NewGauge("RandomValue", float64(rand.Int())))
 }
 
-func registerMetric(store storage.Storage, m metric.Metric) {
-	err := store.Update(m)
+func registerMetric(store storage.Storage, m *metric.Metric) {
+	_, err := store.Update(m)
 	if err != nil {
 		log.Printf("Failed to update metric %v\n", m)
 	}
 }
 
-func sendMetrics(metrics []metric.Metric, server string) {
+func sendMetrics(client *http.Client, metrics []*metric.Metric, server string) {
+	startTime := time.Now()
 	for _, m := range metrics {
-		met := m
-		go func() {
-			url := fmt.Sprintf("%s/update/%s/%s", server, met.Type(), met.Name())
-			body := bytes.NewBuffer([]byte(met.StrValue()))
-			resp, err := http.Post(url, "text/plain", body)
+		m := m
+		func() {
+			url := fmt.Sprintf("%s/update/", server)
+			m, err := json.Marshal(m)
 			if err != nil {
-				fmt.Printf("Unable to file a request to URL: %s, error: %v\n", url, err)
+				log.Printf("failed to marshal metric: %v\n", m)
+			}
+			body := bytes.NewBuffer(m)
+			resp, err := client.Post(url, "application/json", body)
+			if err != nil {
+				log.Printf("unable to file a request to URL: %s, error: %v, metric: %v\n", url, err, string(m))
 				return
 			}
-			defer resp.Body.Close()
+			if err := resp.Body.Close(); err != nil {
+				log.Print("unable to close a body")
+				return
+			}
 		}()
 	}
+	now := time.Now()
+	log.Printf("successfully updated %d metrics in %f seconds", len(metrics), now.Sub(startTime).Seconds())
 }
