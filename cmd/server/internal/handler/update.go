@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -25,22 +26,22 @@ type updateMetricURI struct {
 func (h *Handler) UpdateMetricHandler(c *gin.Context) {
 	var uri updateMetricURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		log.Println(c.AbortWithError(http.StatusBadRequest, err))
 		return
 	}
 
 	m, err := createMetric(uri)
 	if errors.Is(err, ErrUnknownMetricType) {
-		c.AbortWithError(http.StatusNotImplemented, err)
+		log.Println(c.AbortWithError(http.StatusNotImplemented, err))
 		return
 	}
 	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		log.Println(c.AbortWithError(http.StatusBadRequest, err))
 		return
 	}
 
 	if _, err := h.storage.Update(m); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		log.Println(c.AbortWithError(http.StatusBadRequest, err))
 	}
 	c.Status(http.StatusOK)
 }
@@ -48,17 +49,17 @@ func (h *Handler) UpdateMetricHandler(c *gin.Context) {
 func (h *Handler) UpdateMetricHandler2(c *gin.Context) {
 	var m *metric.Metric
 	if err := c.ShouldBind(&m); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		log.Println(c.AbortWithError(http.StatusBadRequest, err))
 		return
 	}
 	if err := m.Validate(); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		log.Println(c.AbortWithError(http.StatusBadRequest, err))
 		return
 	}
 
 	m, err := h.storage.Update(m)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
+		log.Println(c.AbortWithError(http.StatusInternalServerError, err))
 		return
 	}
 

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/denistakeda/alerting/internal/metric"
@@ -15,7 +16,7 @@ type getMetricURI struct {
 func (h *Handler) GetMetricHandler(c *gin.Context) {
 	var uri getMetricURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		log.Println(c.AbortWithError(http.StatusBadRequest, err))
 		return
 	}
 
@@ -35,7 +36,7 @@ func (h *Handler) GetMetricHandler(c *gin.Context) {
 func (h *Handler) GetMetricHandler2(c *gin.Context) {
 	var requestMetric *metric.Metric
 	if err := c.ShouldBind(&requestMetric); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		log.Println(c.AbortWithError(http.StatusBadRequest, err))
 		return
 	}
 	m, ok := h.storage.Get(requestMetric.Type(), requestMetric.Name())
