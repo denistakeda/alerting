@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/denistakeda/alerting/cmd/server/internal/config"
-	"github.com/denistakeda/alerting/cmd/server/internal/handler"
+	"github.com/denistakeda/alerting/internal/server/config"
+	"github.com/denistakeda/alerting/internal/server/handler"
 	s "github.com/denistakeda/alerting/internal/storage"
 	"github.com/denistakeda/alerting/internal/storage/filestorage"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
@@ -24,7 +24,7 @@ func main() {
 	storage := getStorage(conf)
 
 	r := setupRouter(storage)
-	r.LoadHTMLGlob("cmd/server/internal/templates/*")
+	r.LoadHTMLGlob("internal/server/templates/*")
 	serverChan := runServer(r, conf.Address)
 	interruptChan := handleInterrupt()
 	select {

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/denistakeda/alerting/cmd/agent/internal/config"
+	"github.com/denistakeda/alerting/internal/agent/config"
 	"log"
 	"math/rand"
 	"net/http"
