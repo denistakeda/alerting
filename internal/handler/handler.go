@@ -6,10 +6,12 @@ import (
 
 type Handler struct {
 	storage s.Storage
+	hashKey string
 }
 
-func New(storage s.Storage) *Handler {
+func New(storage s.Storage, hashKey string) *Handler {
 	return &Handler{
 		storage: storage,
+		hashKey: hashKey,
 	}
 }

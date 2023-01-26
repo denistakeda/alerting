@@ -1,6 +1,8 @@
 package metric
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -18,21 +20,24 @@ type Metric struct {
 	MType Type     `json:"type"`
 	Value *float64 `json:"value,omitempty"`
 	Delta *int64   `json:"delta,omitempty"`
+	Hash  string   `json:"hash,omitempty"`
 }
 
-func NewGauge(name string, value float64) *Metric {
+func NewGauge(name string, value float64, hashKey string) *Metric {
 	return &Metric{
 		MType: Gauge,
 		ID:    name,
 		Value: &value,
+		Hash:  hash(fmt.Sprintf("%s:gauge:%f", name, value), hashKey),
 	}
 }
 
-func NewCounter(name string, value int64) *Metric {
+func NewCounter(name string, delta int64, hashKey string) *Metric {
 	return &Metric{
 		MType: Counter,
 		ID:    name,
-		Delta: &value,
+		Delta: &delta,
+		Hash:  hash(fmt.Sprintf("%s:counter:%d", name, delta), hashKey),
 	}
 }
 
@@ -90,7 +95,7 @@ func (m *Metric) String() string {
 	return string(res)
 }
 
-func Update(old *Metric, new *Metric) *Metric {
+func Update(old *Metric, new *Metric, hashKey string) *Metric {
 	if old == nil {
 		return new
 	}
@@ -104,7 +109,7 @@ func Update(old *Metric, new *Metric) *Metric {
 	case Gauge:
 		return new
 	case Counter:
-		return NewCounter(old.ID, *old.Delta+*new.Delta)
+		return NewCounter(old.ID, *old.Delta+*new.Delta, hashKey)
 	default:
 		// Should never happen
 		return old
@@ -120,4 +125,15 @@ func TypeFromString(str string) (Type, error) {
 	default:
 		return "", fmt.Errorf("unknown metric type: '%s'", str)
 	}
+}
+
+func hash(src string, key string) string {
+	if key == "" {
+		return ""
+	}
+
+	h := hmac.New(sha256.New, []byte(key))
+	h.Write([]byte(src))
+
+	return string(h.Sum(nil))
 }

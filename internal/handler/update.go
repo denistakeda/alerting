@@ -30,7 +30,7 @@ func (h *Handler) UpdateMetricHandler(c *gin.Context) {
 		return
 	}
 
-	m, err := createMetric(uri)
+	m, err := createMetric(uri, h.hashKey)
 	if errors.Is(err, ErrUnknownMetricType) {
 		log.Println(c.AbortWithError(http.StatusNotImplemented, err))
 		return
@@ -66,20 +66,20 @@ func (h *Handler) UpdateMetricHandler2(c *gin.Context) {
 	c.JSON(http.StatusOK, m)
 }
 
-func createMetric(uri updateMetricURI) (*metric.Metric, error) {
+func createMetric(uri updateMetricURI, hashKey string) (*metric.Metric, error) {
 	switch uri.MetricType {
 	case "gauge":
 		val, err := strconv.ParseFloat(uri.MetricValue, 64)
 		if err != nil {
 			return nil, errextra.Wrapf(ErrIncorrectValue, "expected to be float64, got \"%s\"", uri.MetricValue)
 		}
-		return metric.NewGauge(uri.MetricName, val), nil
+		return metric.NewGauge(uri.MetricName, val, hashKey), nil
 	case "counter":
 		val, err := strconv.ParseInt(uri.MetricValue, 10, 64)
 		if err != nil {
 			return nil, errextra.Wrapf(ErrIncorrectValue, "expected to be int64, got \"%s\"", uri.MetricValue)
 		}
-		return metric.NewCounter(uri.MetricName, val), nil
+		return metric.NewCounter(uri.MetricName, val, hashKey), nil
 	default:
 		return nil, errextra.Wrapf(ErrUnknownMetricType, "expected \"gauge\" or \"counter\", got \"%s\"", uri.MetricType)
 	}

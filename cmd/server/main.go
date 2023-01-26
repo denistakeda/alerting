@@ -23,7 +23,7 @@ func main() {
 
 	storage := getStorage(conf)
 
-	r := setupRouter(storage)
+	r := setupRouter(storage, conf.Key)
 	r.LoadHTMLGlob("internal/templates/*")
 	serverChan := runServer(r, conf.Address)
 	interruptChan := handleInterrupt()
@@ -41,12 +41,12 @@ func main() {
 	}
 }
 
-func setupRouter(storage s.Storage) *gin.Engine {
+func setupRouter(storage s.Storage, hashKey string) *gin.Engine {
 	r := gin.Default()
 	r.RedirectTrailingSlash = false
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 
-	h := handler.New(storage)
+	h := handler.New(storage, hashKey)
 
 	r.POST("/update/", h.UpdateMetricHandler2)
 	r.POST("/update/:metric_type/:metric_name/:metric_value", h.UpdateMetricHandler)
@@ -74,9 +74,9 @@ func handleInterrupt() <-chan os.Signal {
 
 func getStorage(conf servercfg.Config) s.Storage {
 	if conf.StoreFile == "" {
-		return memstorage.New()
+		return memstorage.New(conf.Key)
 	} else {
-		storage, err := filestorage.New(conf.StoreFile, conf.StoreInterval, conf.Restore)
+		storage, err := filestorage.New(conf.StoreFile, conf.StoreInterval, conf.Restore, conf.Key)
 		if err != nil {
 			log.Fatal(err)
 		}

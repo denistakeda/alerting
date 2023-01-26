@@ -18,9 +18,9 @@ type Filestorage struct {
 	storeTicker *time.Ticker
 }
 
-func New(storeFile string, storeInterval time.Duration, restore bool) (*Filestorage, error) {
+func New(storeFile string, storeInterval time.Duration, restore bool, hashKey string) (*Filestorage, error) {
 	instance := &Filestorage{
-		mstorage:  memstorage.New(),
+		mstorage:  memstorage.New(hashKey),
 		storeFile: storeFile,
 	}
 

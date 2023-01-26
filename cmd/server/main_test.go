@@ -76,7 +76,7 @@ func Test_updateMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			router := setupRouter(tt.storage)
+			router := setupRouter(tt.storage, "")
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("POST", tt.request, nil)
@@ -88,9 +88,9 @@ func Test_updateMetric(t *testing.T) {
 }
 
 func Test_getMetric(t *testing.T) {
-	m1 := metric.NewGauge("gauge1", 3.14)
-	m2 := metric.NewGauge("gauge2", 5.18)
-	m3 := metric.NewCounter("counter1", 7)
+	m1 := metric.NewGauge("gauge1", 3.14, "")
+	m2 := metric.NewGauge("gauge2", 5.18, "")
+	m3 := metric.NewCounter("counter1", 7, "")
 	type want struct {
 		code int
 		body string
@@ -131,7 +131,7 @@ func Test_getMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			router := setupRouter(tt.storage)
+			router := setupRouter(tt.storage, "")
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", tt.request, nil)
@@ -145,9 +145,9 @@ func Test_getMetric(t *testing.T) {
 
 func Test_update(t *testing.T) {
 
-	g1 := metric.NewGauge("gauge1", 3.14)
+	g1 := metric.NewGauge("gauge1", 3.14, "")
 	//g2 := metric.NewGauge("gauge2", 5.18)
-	c3 := metric.NewCounter("counter1", 7)
+	c3 := metric.NewCounter("counter1", 7, "")
 
 	type want struct {
 		code int
@@ -170,11 +170,11 @@ func Test_update(t *testing.T) {
 		},
 		{
 			name:        "existing gauge",
-			requestBody: marshal(t, metric.NewGauge(g1.Name(), 5.18)),
+			requestBody: marshal(t, metric.NewGauge(g1.Name(), 5.18, "")),
 			storage:     createStorage(t, []*metric.Metric{g1}),
 			want: want{
 				code: http.StatusOK,
-				body: marshal(t, metric.NewGauge(g1.Name(), 5.18)),
+				body: marshal(t, metric.NewGauge(g1.Name(), 5.18, "")),
 			},
 		},
 		{
@@ -192,14 +192,14 @@ func Test_update(t *testing.T) {
 			storage:     createStorage(t, []*metric.Metric{c3}),
 			want: want{
 				code: http.StatusOK,
-				body: marshal(t, metric.NewCounter(c3.Name(), 14)),
+				body: marshal(t, metric.NewCounter(c3.Name(), 14, "")),
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			router := setupRouter(tt.storage)
+			router := setupRouter(tt.storage, "")
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("POST", "/update/", bytes.NewBuffer(tt.requestBody))
 			req.Header.Set("Content-Type", "application/json")
@@ -218,7 +218,7 @@ func marshal(t *testing.T, v any) []byte {
 }
 
 func createStorage(t *testing.T, metrics []*metric.Metric) s.Storage {
-	ms := memstorage.New()
+	ms := memstorage.New("")
 	for _, m := range metrics {
 		_, err := ms.Update(m)
 		require.NoError(t, err)

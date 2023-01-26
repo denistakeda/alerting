@@ -13,6 +13,7 @@ type Config struct {
 	Address        string        `env:"ADDRESS"`
 	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
 	PollInterval   time.Duration `env:"POLL_INTERVAL"`
+	Key            string        `env:"KEY"`
 }
 
 func GetConfig() (Config, error) {
@@ -22,6 +23,7 @@ func GetConfig() (Config, error) {
 	flag.StringVar(&config.Address, "a", "http://localhost:8080", "Server to send metrics to")
 	flag.DurationVar(&config.ReportInterval, "r", 10*time.Second, "Interval to send metrics to server")
 	flag.DurationVar(&config.PollInterval, "p", 2*time.Second, "Interval to collect metrics")
+	flag.StringVar(&config.Key, "k", "", "Key to sign")
 	flag.Parse()
 
 	// Populate data from the env variables

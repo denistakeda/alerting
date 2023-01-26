@@ -6,13 +6,15 @@ import (
 )
 
 type Memstorage struct {
-	types map[metric.Type]map[string]*metric.Metric
-	mx    sync.Mutex
+	types   map[metric.Type]map[string]*metric.Metric
+	hashKey string
+	mx      sync.Mutex
 }
 
-func New() *Memstorage {
+func New(hashKey string) *Memstorage {
 	return &Memstorage{
-		types: make(map[metric.Type]map[string]*metric.Metric),
+		types:   make(map[metric.Type]map[string]*metric.Metric),
+		hashKey: hashKey,
 	}
 }
 
@@ -39,7 +41,7 @@ func (m *Memstorage) Update(updatedMetric *metric.Metric) (*metric.Metric, error
 		m.types[updatedMetric.Type()] = group
 	}
 
-	res := metric.Update(group[updatedMetric.Name()], updatedMetric)
+	res := metric.Update(group[updatedMetric.Name()], updatedMetric, m.hashKey)
 	group[updatedMetric.Name()] = res
 	return res, nil
 }
