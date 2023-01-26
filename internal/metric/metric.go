@@ -3,6 +3,7 @@ package metric
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
@@ -24,21 +25,19 @@ type Metric struct {
 	Hash  string   `json:"hash,omitempty"`
 }
 
-func NewGauge(name string, value float64, hashKey string) *Metric {
+func NewGauge(name string, value float64) *Metric {
 	return &Metric{
 		MType: Gauge,
 		ID:    name,
 		Value: &value,
-		Hash:  getGaugeHash(name, value, hashKey),
 	}
 }
 
-func NewCounter(name string, delta int64, hashKey string) *Metric {
+func NewCounter(name string, delta int64) *Metric {
 	return &Metric{
 		MType: Counter,
 		ID:    name,
 		Delta: &delta,
-		Hash:  getCounterHash(name, delta, hashKey),
 	}
 }
 
@@ -97,6 +96,19 @@ func (m *Metric) String() string {
 	return string(res)
 }
 
+func (m *Metric) FillHash(hashKey string) {
+	if hashKey == "" {
+		return
+	}
+
+	switch m.MType {
+	case Gauge:
+		m.Hash = getGaugeHash(m.ID, *m.Value, hashKey)
+	case Counter:
+		m.Hash = getCounterHash(m.ID, *m.Delta, hashKey)
+	}
+}
+
 func (m *Metric) VerifyHash(hashKey string) error {
 	if hashKey == "" {
 		return nil
@@ -118,7 +130,7 @@ func (m *Metric) VerifyHash(hashKey string) error {
 	return nil
 }
 
-func Update(old *Metric, new *Metric, hashKey string) *Metric {
+func Update(old *Metric, new *Metric) *Metric {
 	if old == nil {
 		return new
 	}
@@ -132,7 +144,7 @@ func Update(old *Metric, new *Metric, hashKey string) *Metric {
 	case Gauge:
 		return new
 	case Counter:
-		return NewCounter(old.ID, *old.Delta+*new.Delta, hashKey)
+		return NewCounter(old.ID, *old.Delta+*new.Delta)
 	default:
 		// Should never happen
 		return old
@@ -166,5 +178,5 @@ func hash(src string, key string) string {
 	h := hmac.New(sha256.New, []byte(key))
 	h.Write([]byte(src))
 
-	return string(h.Sum(nil))
+	return hex.EncodeToString(h.Sum(nil))
 }

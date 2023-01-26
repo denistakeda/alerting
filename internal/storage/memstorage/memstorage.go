@@ -41,8 +41,9 @@ func (m *Memstorage) Update(updatedMetric *metric.Metric) (*metric.Metric, error
 		m.types[updatedMetric.Type()] = group
 	}
 
-	res := metric.Update(group[updatedMetric.Name()], updatedMetric, m.hashKey)
+	res := metric.Update(group[updatedMetric.Name()], updatedMetric)
 	group[updatedMetric.Name()] = res
+	res.FillHash(m.hashKey)
 	return res, nil
 }
 
@@ -56,6 +57,7 @@ func (m *Memstorage) Replace(met *metric.Metric) {
 		m.types[met.Type()] = group
 	}
 	group[met.Name()] = met
+	met.FillHash(m.hashKey)
 }
 
 func (m *Memstorage) All() []*metric.Metric {

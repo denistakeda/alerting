@@ -30,7 +30,7 @@ func main() {
 	go func() {
 		for range pollTicker.C {
 			runtime.ReadMemStats(mem)
-			registerMetrics(mem, memStorage, conf.Key)
+			registerMetrics(mem, memStorage)
 		}
 	}()
 
@@ -47,37 +47,37 @@ func main() {
 	}
 }
 
-func registerMetrics(memStats *runtime.MemStats, store storage.Storage, hashKey string) {
-	registerMetric(store, metric.NewGauge("Alloc", float64(memStats.Alloc), hashKey))
-	registerMetric(store, metric.NewGauge("BuckHashSys", float64(memStats.BuckHashSys), hashKey))
-	registerMetric(store, metric.NewGauge("Frees", float64(memStats.Frees), hashKey))
-	registerMetric(store, metric.NewGauge("GCCPUFraction", float64(memStats.GCCPUFraction), hashKey))
-	registerMetric(store, metric.NewGauge("GCSys", float64(memStats.GCSys), hashKey))
-	registerMetric(store, metric.NewGauge("HeapAlloc", float64(memStats.HeapAlloc), hashKey))
-	registerMetric(store, metric.NewGauge("HeapIdle", float64(memStats.HeapIdle), hashKey))
-	registerMetric(store, metric.NewGauge("HeapInuse", float64(memStats.HeapInuse), hashKey))
-	registerMetric(store, metric.NewGauge("HeapObjects", float64(memStats.HeapObjects), hashKey))
-	registerMetric(store, metric.NewGauge("HeapReleased", float64(memStats.HeapReleased), hashKey))
-	registerMetric(store, metric.NewGauge("HeapSys", float64(memStats.HeapSys), hashKey))
-	registerMetric(store, metric.NewGauge("LastGC", float64(memStats.LastGC), hashKey))
-	registerMetric(store, metric.NewGauge("Lookups", float64(memStats.Lookups), hashKey))
-	registerMetric(store, metric.NewGauge("MCacheInuse", float64(memStats.MCacheInuse), hashKey))
-	registerMetric(store, metric.NewGauge("MCacheSys", float64(memStats.MCacheSys), hashKey))
-	registerMetric(store, metric.NewGauge("MSpanInuse", float64(memStats.MSpanInuse), hashKey))
-	registerMetric(store, metric.NewGauge("MSpanSys", float64(memStats.MSpanSys), hashKey))
-	registerMetric(store, metric.NewGauge("Mallocs", float64(memStats.Mallocs), hashKey))
-	registerMetric(store, metric.NewGauge("NextGC", float64(memStats.NextGC), hashKey))
-	registerMetric(store, metric.NewGauge("NumForcedGC", float64(memStats.NumForcedGC), hashKey))
-	registerMetric(store, metric.NewGauge("NumGC", float64(memStats.NumGC), hashKey))
-	registerMetric(store, metric.NewGauge("OtherSys", float64(memStats.OtherSys), hashKey))
-	registerMetric(store, metric.NewGauge("PauseTotalNs", float64(memStats.PauseTotalNs), hashKey))
-	registerMetric(store, metric.NewGauge("StackInuse", float64(memStats.StackInuse), hashKey))
-	registerMetric(store, metric.NewGauge("StackSys", float64(memStats.StackSys), hashKey))
-	registerMetric(store, metric.NewGauge("Sys", float64(memStats.Sys), hashKey))
-	registerMetric(store, metric.NewGauge("TotalAlloc", float64(memStats.TotalAlloc), hashKey))
+func registerMetrics(memStats *runtime.MemStats, store storage.Storage) {
+	registerMetric(store, metric.NewGauge("Alloc", float64(memStats.Alloc)))
+	registerMetric(store, metric.NewGauge("BuckHashSys", float64(memStats.BuckHashSys)))
+	registerMetric(store, metric.NewGauge("Frees", float64(memStats.Frees)))
+	registerMetric(store, metric.NewGauge("GCCPUFraction", float64(memStats.GCCPUFraction)))
+	registerMetric(store, metric.NewGauge("GCSys", float64(memStats.GCSys)))
+	registerMetric(store, metric.NewGauge("HeapAlloc", float64(memStats.HeapAlloc)))
+	registerMetric(store, metric.NewGauge("HeapIdle", float64(memStats.HeapIdle)))
+	registerMetric(store, metric.NewGauge("HeapInuse", float64(memStats.HeapInuse)))
+	registerMetric(store, metric.NewGauge("HeapObjects", float64(memStats.HeapObjects)))
+	registerMetric(store, metric.NewGauge("HeapReleased", float64(memStats.HeapReleased)))
+	registerMetric(store, metric.NewGauge("HeapSys", float64(memStats.HeapSys)))
+	registerMetric(store, metric.NewGauge("LastGC", float64(memStats.LastGC)))
+	registerMetric(store, metric.NewGauge("Lookups", float64(memStats.Lookups)))
+	registerMetric(store, metric.NewGauge("MCacheInuse", float64(memStats.MCacheInuse)))
+	registerMetric(store, metric.NewGauge("MCacheSys", float64(memStats.MCacheSys)))
+	registerMetric(store, metric.NewGauge("MSpanInuse", float64(memStats.MSpanInuse)))
+	registerMetric(store, metric.NewGauge("MSpanSys", float64(memStats.MSpanSys)))
+	registerMetric(store, metric.NewGauge("Mallocs", float64(memStats.Mallocs)))
+	registerMetric(store, metric.NewGauge("NextGC", float64(memStats.NextGC)))
+	registerMetric(store, metric.NewGauge("NumForcedGC", float64(memStats.NumForcedGC)))
+	registerMetric(store, metric.NewGauge("NumGC", float64(memStats.NumGC)))
+	registerMetric(store, metric.NewGauge("OtherSys", float64(memStats.OtherSys)))
+	registerMetric(store, metric.NewGauge("PauseTotalNs", float64(memStats.PauseTotalNs)))
+	registerMetric(store, metric.NewGauge("StackInuse", float64(memStats.StackInuse)))
+	registerMetric(store, metric.NewGauge("StackSys", float64(memStats.StackSys)))
+	registerMetric(store, metric.NewGauge("Sys", float64(memStats.Sys)))
+	registerMetric(store, metric.NewGauge("TotalAlloc", float64(memStats.TotalAlloc)))
 
-	registerMetric(store, metric.NewCounter("PollCount", 1, hashKey))
-	registerMetric(store, metric.NewGauge("RandomValue", float64(rand.Int()), hashKey))
+	registerMetric(store, metric.NewCounter("PollCount", 1))
+	registerMetric(store, metric.NewGauge("RandomValue", float64(rand.Int())))
 }
 
 func registerMetric(store storage.Storage, m *metric.Metric) {
