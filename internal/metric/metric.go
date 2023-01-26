@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"strconv"
 )
 
@@ -28,7 +29,7 @@ func NewGauge(name string, value float64, hashKey string) *Metric {
 		MType: Gauge,
 		ID:    name,
 		Value: &value,
-		Hash:  hash(fmt.Sprintf("%s:gauge:%f", name, value), hashKey),
+		Hash:  getGaugeHash(name, value, hashKey),
 	}
 }
 
@@ -37,7 +38,7 @@ func NewCounter(name string, delta int64, hashKey string) *Metric {
 		MType: Counter,
 		ID:    name,
 		Delta: &delta,
-		Hash:  hash(fmt.Sprintf("%s:counter:%d", name, delta), hashKey),
+		Hash:  getCounterHash(name, delta, hashKey),
 	}
 }
 
@@ -84,6 +85,7 @@ func (m *Metric) Validate() error {
 	default:
 		return fmt.Errorf("unknown metric type: '%s'", m.MType)
 	}
+
 	return nil
 }
 
@@ -93,6 +95,27 @@ func (m *Metric) String() string {
 		return "error" // should never happen
 	}
 	return string(res)
+}
+
+func (m *Metric) VerifyHash(hashKey string) error {
+	if hashKey == "" {
+		return nil
+	}
+
+	var isValid bool
+
+	switch m.MType {
+	case Gauge:
+		isValid = m.Hash == getGaugeHash(m.ID, *m.Value, hashKey)
+	case Counter:
+		isValid = m.Hash == getCounterHash(m.ID, *m.Delta, hashKey)
+	}
+
+	if !isValid {
+		return errors.New("invalid hash")
+	}
+
+	return nil
 }
 
 func Update(old *Metric, new *Metric, hashKey string) *Metric {
@@ -125,6 +148,14 @@ func TypeFromString(str string) (Type, error) {
 	default:
 		return "", fmt.Errorf("unknown metric type: '%s'", str)
 	}
+}
+
+func getGaugeHash(name string, value float64, hashKey string) string {
+	return hash(fmt.Sprintf("%s:gauge:%f", name, value), hashKey)
+}
+
+func getCounterHash(name string, delta int64, hashKey string) string {
+	return hash(fmt.Sprintf("%s:counter:%d", name, delta), hashKey)
 }
 
 func hash(src string, key string) string {

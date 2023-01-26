@@ -57,6 +57,11 @@ func (h *Handler) UpdateMetricHandler2(c *gin.Context) {
 		return
 	}
 
+	if err := m.VerifyHash(h.hashKey); err != nil {
+		log.Println(c.AbortWithError(http.StatusBadRequest, err))
+		return
+	}
+
 	m, err := h.storage.Update(m)
 	if err != nil {
 		log.Println(c.AbortWithError(http.StatusInternalServerError, err))
