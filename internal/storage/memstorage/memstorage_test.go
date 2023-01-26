@@ -14,7 +14,7 @@ func Test_memstorage_ImplementsStorage(t *testing.T) {
 }
 
 func Test_memstorage_Get(t *testing.T) {
-	m1 := metric.NewGauge("m1_name", 3.14)
+	m1 := metric.NewGauge("m1_name", 3.14, "")
 	type args struct {
 		metricType metric.Type
 		metricName string
@@ -65,8 +65,8 @@ func Test_memstorage_Get(t *testing.T) {
 }
 
 func Test_memstorage_Update(t *testing.T) {
-	m1 := metric.NewGauge("m1_name", 3.14)
-	m2 := metric.NewGauge("m2_name", 5.16)
+	m1 := metric.NewGauge("m1_name", 3.14, "")
+	m2 := metric.NewGauge("m2_name", 5.16, "")
 	type args struct {
 		updatedMetric *metric.Metric
 	}
@@ -104,7 +104,7 @@ func Test_memstorage_Update(t *testing.T) {
 }
 
 func create(t *testing.T, metrics []*metric.Metric) *Memstorage {
-	ms := New()
+	ms := New("")
 	for _, m := range metrics {
 		_, err := ms.Update(m)
 		require.NoError(t, err)

@@ -14,12 +14,12 @@ func TestMetric_StrValue(t *testing.T) {
 	}{
 		{
 			name:   "gauge",
-			metric: NewGauge("gauge", 3.14159265),
+			metric: NewGauge("gauge", 3.14159265, ""),
 			want:   "3.142",
 		},
 		{
 			name:   "counter",
-			metric: NewCounter("gauge", 5),
+			metric: NewCounter("gauge", 5, ""),
 			want:   "5",
 		},
 	}
@@ -31,8 +31,8 @@ func TestMetric_StrValue(t *testing.T) {
 }
 
 func TestMetric_UpdateValue(t *testing.T) {
-	g1, g2 := NewGauge("g1", 3.14), NewGauge("g2", 5.17)
-	c1, c2 := NewCounter("c1", 5), NewCounter("c2", 7)
+	g1, g2 := NewGauge("g1", 3.14, ""), NewGauge("g2", 5.17, "")
+	c1, c2 := NewCounter("c1", 5, ""), NewCounter("c2", 7, "")
 
 	tests := []struct {
 		name string
@@ -50,7 +50,7 @@ func TestMetric_UpdateValue(t *testing.T) {
 			name: "counter to counter",
 			old:  c1,
 			new:  c2,
-			want: NewCounter("c1", 5+7),
+			want: NewCounter("c1", 5+7, ""),
 		},
 		{
 			name: "old is nil",
@@ -73,7 +73,7 @@ func TestMetric_UpdateValue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, Update(tt.old, tt.new))
+			assert.Equal(t, tt.want, Update(tt.old, tt.new, ""))
 		})
 	}
 }
