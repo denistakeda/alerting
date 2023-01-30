@@ -4,6 +4,7 @@ import (
 	"github.com/denistakeda/alerting/internal/config/server"
 	"github.com/denistakeda/alerting/internal/handler"
 	s "github.com/denistakeda/alerting/internal/storage"
+	"github.com/denistakeda/alerting/internal/storage/dbstorage"
 	"github.com/denistakeda/alerting/internal/storage/filestorage"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
 	"github.com/gin-contrib/gzip"
@@ -22,36 +23,46 @@ func main() {
 	log.Printf("configuration: %v", conf)
 
 	storage := getStorage(conf)
+	dbStorage, err := dbstorage.New(conf.DatabaseDSN)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	r := setupRouter(storage, conf.Key)
+	r := setupRouter(storage, dbStorage, conf.Key)
 	r.LoadHTMLGlob("internal/templates/*")
 	serverChan := runServer(r, conf.Address)
 	interruptChan := handleInterrupt()
 	select {
 	case serverError := <-serverChan:
-		if err := storage.Close(); err != nil {
-			log.Printf("Unable to properly stop the storage: %v\n", err)
-		}
+		stopServer(storage, dbStorage)
 		log.Println(serverError)
 	case <-interruptChan:
-		if err := storage.Close(); err != nil {
-			log.Printf("Unable to properly stop the storage: %v\n", err)
-		}
+		stopServer(storage, dbStorage)
 		log.Println("Program was interrupted")
 	}
 }
 
-func setupRouter(storage s.Storage, hashKey string) *gin.Engine {
+func stopServer(storage s.Storage, dbStorage *dbstorage.DBStorage) {
+	if err := storage.Close(); err != nil {
+		log.Printf("Unable to properly stop the storage: %v\n", err)
+	}
+	if err := dbStorage.Close(); err != nil {
+		log.Printf("Unable to properly stop the db storage: %v\n", err)
+	}
+}
+
+func setupRouter(storage s.Storage, dbStorage *dbstorage.DBStorage, hashKey string) *gin.Engine {
 	r := gin.Default()
 	r.RedirectTrailingSlash = false
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 
-	h := handler.New(storage, hashKey)
+	h := handler.New(storage, dbStorage, hashKey)
 
 	r.POST("/update/", h.UpdateMetricHandler2)
 	r.POST("/update/:metric_type/:metric_name/:metric_value", h.UpdateMetricHandler)
 	r.POST("/value/", h.GetMetricHandler2)
 	r.GET("/value/:metric_type/:metric_name", h.GetMetricHandler)
+	r.GET("/ping", h.PingHandler)
 	r.GET("/", h.MainPageHandler)
 	return r
 }

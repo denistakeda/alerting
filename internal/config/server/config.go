@@ -13,6 +13,7 @@ type Config struct {
 	StoreFile     string        `env:"STORE_FILE"`
 	Restore       bool          `env:"RESTORE"`
 	Key           string        `env:"KEY"`
+	DatabaseDSN   string        `env:"DATABASE_DSN"`
 }
 
 func GetConfig() (Config, error) {
@@ -24,6 +25,7 @@ func GetConfig() (Config, error) {
 	flag.DurationVar(&config.StoreInterval, "i", 300*time.Second, "Interval to dump state")
 	flag.StringVar(&config.StoreFile, "f", "/tmp/devops-metrics-db.json", "Database file")
 	flag.StringVar(&config.Key, "k", "", "Hash key")
+	flag.StringVar(&config.DatabaseDSN, "d", "", "Database DSN")
 	flag.Parse()
 
 	// Populate data from the env variables

@@ -7,6 +7,7 @@ require (
 	github.com/gin-contrib/gzip v0.0.6
 	github.com/gin-gonic/gin v1.8.1
 	github.com/golang/mock v1.6.0
+	github.com/jackc/pgx/v5 v5.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.1
 )
@@ -18,6 +19,8 @@ require (
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator/v10 v10.11.1 // indirect
 	github.com/goccy/go-json v0.10.0 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
