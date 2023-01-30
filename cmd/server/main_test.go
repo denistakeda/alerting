@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/denistakeda/alerting/internal/storage/dbstorage"
 	"github.com/denistakeda/alerting/mocks"
 	"github.com/golang/mock/gomock"
 	"net/http"
@@ -73,7 +74,10 @@ func Test_updateMetric(t *testing.T) {
 			s := mocks.NewMockStorage(ctrl)
 			s.EXPECT().Update(tt.met).Return(tt.met, nil).AnyTimes()
 
-			router := setupRouter(s, "")
+			dbStorage, err := dbstorage.New("")
+			assert.NoError(t, err)
+
+			router := setupRouter(s, dbStorage, "")
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("POST", tt.request, nil)
@@ -158,7 +162,10 @@ func Test_getMetric(t *testing.T) {
 				Return(tt.storageMock.retMetric, tt.storageMock.retOk).
 				AnyTimes()
 
-			router := setupRouter(s, "")
+			dbStorage, err := dbstorage.New("")
+			assert.NoError(t, err)
+
+			router := setupRouter(s, dbStorage, "")
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", tt.request, nil)
@@ -257,7 +264,11 @@ func Test_update(t *testing.T) {
 				Return(tt.storageMock.resMetric, tt.storageMock.resError).
 				AnyTimes()
 
-			router := setupRouter(s, "")
+			dbStorage, err := dbstorage.New("")
+			assert.NoError(t, err)
+
+			router := setupRouter(s, dbStorage, "")
+
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("POST", "/update/", bytes.NewBuffer(tt.requestBody))
 			req.Header.Set("Content-Type", "application/json")

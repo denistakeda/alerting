@@ -13,6 +13,10 @@ type DBStorage struct {
 }
 
 func New(dsn string) (*DBStorage, error) {
+	if dsn == "" {
+		return &DBStorage{}, nil
+	}
+
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to connect to database")
