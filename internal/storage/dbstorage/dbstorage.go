@@ -18,6 +18,11 @@ func New(dsn string) (*DBStorage, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to connect to database")
 	}
+
+	if err := bootstrapDatabase(db); err != nil {
+		return nil, errors.Wrap(err, "failed to bootstrap database")
+	}
+
 	return &DBStorage{db: db}, nil
 }
 
@@ -47,4 +52,16 @@ func (dbs *DBStorage) Ping(ctx context.Context) error {
 
 func (dbs *DBStorage) Close() error {
 	return dbs.db.Close()
+}
+
+func bootstrapDatabase(db *sql.DB) error {
+	row := db.QueryRow(`
+		CREATE TABLE IF NOT EXISTS metrics (
+    		id VARCHAR(256),
+		    mtype VARCHAR(10),
+		    value NUMERIC(64),
+		    delta INT
+		)
+	`)
+	return row.Err()
 }
