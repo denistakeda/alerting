@@ -1,6 +1,7 @@
 package filestorage
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/denistakeda/alerting/internal/metric"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
@@ -62,6 +63,11 @@ func (fs *Filestorage) Close() error {
 	fs.storeTicker.Stop()
 	fs.dump()
 	return fs.mstorage.Close()
+}
+
+func (fs *Filestorage) Ping(ctx context.Context) error {
+	// For file storage there is no need to do anything on ping
+	return nil
 }
 
 func (fs *Filestorage) dump() {

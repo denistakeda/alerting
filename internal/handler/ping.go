@@ -7,7 +7,7 @@ import (
 )
 
 func (h *Handler) PingHandler(c *gin.Context) {
-	if err := h.dbStorage.Ping(c); err != nil {
+	if err := h.storage.Ping(c); err != nil {
 		log.Println(c.AbortWithError(http.StatusInternalServerError, err))
 		return
 	}

@@ -3,6 +3,7 @@ package dbstorage
 import (
 	"context"
 	"database/sql"
+	"github.com/denistakeda/alerting/internal/metric"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pkg/errors"
 	"time"
@@ -13,15 +14,26 @@ type DBStorage struct {
 }
 
 func New(dsn string) (*DBStorage, error) {
-	if dsn == "" {
-		return &DBStorage{}, nil
-	}
-
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to connect to database")
 	}
 	return &DBStorage{db: db}, nil
+}
+
+func (dbs *DBStorage) Get(metricType metric.Type, metricName string) (*metric.Metric, bool) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (dbs *DBStorage) Update(metric *metric.Metric) (*metric.Metric, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (dbs *DBStorage) All() []*metric.Metric {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (dbs *DBStorage) Ping(ctx context.Context) error {

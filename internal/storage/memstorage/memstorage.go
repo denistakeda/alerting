@@ -1,6 +1,7 @@
 package memstorage
 
 import (
+	"context"
 	"github.com/denistakeda/alerting/internal/metric"
 	"sync"
 )
@@ -75,5 +76,10 @@ func (m *Memstorage) All() []*metric.Metric {
 
 func (m *Memstorage) Close() error {
 	// For memory storage there is no need to do anything on close
+	return nil
+}
+
+func (m *Memstorage) Ping(ctx context.Context) error {
+	// For memory storage there is no need to do anything on ping
 	return nil
 }

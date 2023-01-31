@@ -2,19 +2,16 @@ package handler
 
 import (
 	s "github.com/denistakeda/alerting/internal/storage"
-	"github.com/denistakeda/alerting/internal/storage/dbstorage"
 )
 
 type Handler struct {
-	storage   s.Storage
-	dbStorage *dbstorage.DBStorage
-	hashKey   string
+	storage s.Storage
+	hashKey string
 }
 
-func New(storage s.Storage, dbStorage *dbstorage.DBStorage, hashKey string) *Handler {
+func New(storage s.Storage, hashKey string) *Handler {
 	return &Handler{
-		storage:   storage,
-		hashKey:   hashKey,
-		dbStorage: dbStorage,
+		storage: storage,
+		hashKey: hashKey,
 	}
 }

@@ -22,41 +22,37 @@ func main() {
 	}
 	log.Printf("configuration: %v", conf)
 
-	storage := getStorage(conf)
-	dbStorage, err := dbstorage.New(conf.DatabaseDSN)
+	storage, err := getStorage(conf)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	r := setupRouter(storage, dbStorage, conf.Key)
+	r := setupRouter(storage, conf.Key)
 	r.LoadHTMLGlob("internal/templates/*")
 	serverChan := runServer(r, conf.Address)
 	interruptChan := handleInterrupt()
 	select {
 	case serverError := <-serverChan:
-		stopServer(storage, dbStorage)
 		log.Println(serverError)
 	case <-interruptChan:
-		stopServer(storage, dbStorage)
 		log.Println("Program was interrupted")
 	}
+
+	stopServer(storage)
 }
 
-func stopServer(storage s.Storage, dbStorage *dbstorage.DBStorage) {
+func stopServer(storage s.Storage) {
 	if err := storage.Close(); err != nil {
 		log.Printf("Unable to properly stop the storage: %v\n", err)
 	}
-	if err := dbStorage.Close(); err != nil {
-		log.Printf("Unable to properly stop the db storage: %v\n", err)
-	}
 }
 
-func setupRouter(storage s.Storage, dbStorage *dbstorage.DBStorage, hashKey string) *gin.Engine {
+func setupRouter(storage s.Storage, hashKey string) *gin.Engine {
 	r := gin.Default()
 	r.RedirectTrailingSlash = false
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 
-	h := handler.New(storage, dbStorage, hashKey)
+	h := handler.New(storage, hashKey)
 
 	r.POST("/update/", h.UpdateMetricHandler2)
 	r.POST("/update/:metric_type/:metric_name/:metric_value", h.UpdateMetricHandler)
@@ -83,14 +79,12 @@ func handleInterrupt() <-chan os.Signal {
 	return out
 }
 
-func getStorage(conf servercfg.Config) s.Storage {
-	if conf.StoreFile == "" {
-		return memstorage.New(conf.Key)
+func getStorage(conf servercfg.Config) (s.Storage, error) {
+	if conf.DatabaseDSN != "" {
+		return dbstorage.New(conf.DatabaseDSN)
+	} else if conf.StoreFile != "" {
+		return filestorage.New(conf.StoreFile, conf.StoreInterval, conf.Restore, conf.Key)
 	} else {
-		storage, err := filestorage.New(conf.StoreFile, conf.StoreInterval, conf.Restore, conf.Key)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return storage
+		return memstorage.New(conf.Key), nil
 	}
 }
