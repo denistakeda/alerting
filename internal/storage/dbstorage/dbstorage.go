@@ -6,14 +6,16 @@ import (
 	"github.com/denistakeda/alerting/internal/metric"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pkg/errors"
+	"log"
 	"time"
 )
 
 type DBStorage struct {
-	db *sql.DB
+	db      *sql.DB
+	hashKey string
 }
 
-func New(dsn string) (*DBStorage, error) {
+func New(dsn string, hashKey string) (*DBStorage, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to connect to database")
@@ -23,22 +25,80 @@ func New(dsn string) (*DBStorage, error) {
 		return nil, errors.Wrap(err, "failed to bootstrap database")
 	}
 
-	return &DBStorage{db: db}, nil
+	return &DBStorage{db: db, hashKey: hashKey}, nil
 }
 
 func (dbs *DBStorage) Get(metricType metric.Type, metricName string) (*metric.Metric, bool) {
-	//TODO implement me
-	panic("implement me")
+	var met metric.Metric
+	err := dbs.db.QueryRow(`
+		SELECT id, mtype, value, delta
+		FROM metrics
+		WHERE id=$1 AND mtype=$2
+	`, metricName, metricType).
+		Scan(&met.ID, &met.MType, &met.Value, &met.Delta)
+	if err != nil {
+		return nil, false
+	}
+	met.FillHash(dbs.hashKey)
+	return &met, true
 }
 
-func (dbs *DBStorage) Update(metric *metric.Metric) (*metric.Metric, error) {
-	//TODO implement me
-	panic("implement me")
+func (dbs *DBStorage) Update(met *metric.Metric) (*metric.Metric, error) {
+	oldMet, ok := dbs.Get(met.Type(), met.Name())
+	newMet := metric.Update(oldMet, met)
+	var row *sql.Row
+	if ok {
+		row = dbs.db.QueryRow(`
+			UPDATE metrics
+			SET value = $1,
+				delta = $2
+			WHERE id = $3 AND mtype = $4
+		`, newMet.Value, newMet.Delta, newMet.ID, newMet.MType)
+	} else {
+		row = dbs.db.QueryRow(`
+			INSERT INTO metrics (id, mtype, value, delta)
+			VALUES ($1, $2, $3, $4)
+		`, newMet.ID, newMet.MType, newMet.Value, newMet.Delta)
+	}
+	if row.Err() != nil {
+		return nil, errors.Wrap(row.Err(), "unable to update metric")
+	}
+	newMet.FillHash(dbs.hashKey)
+	return newMet, nil
 }
 
+// TODO: return error
 func (dbs *DBStorage) All() []*metric.Metric {
-	//TODO implement me
-	panic("implement me")
+	result := make([]*metric.Metric, 0)
+
+	rows, err := dbs.db.Query(`
+		SELECT id, mtype, value, delta
+		FROM metrics
+	`)
+	if err != nil {
+		log.Println("failed to query list of all metrics")
+		return result
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var m metric.Metric
+		err = rows.Scan(&m.ID, &m.MType, &m.Value, &m.Delta)
+		if err != nil {
+			log.Println("failed to parse metric")
+			continue
+		}
+		m.FillHash(dbs.hashKey)
+		result = append(result, &m)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		log.Println("error while iterate over list of metrics")
+		return result
+	}
+
+	return result
 }
 
 func (dbs *DBStorage) Ping(ctx context.Context) error {
@@ -59,9 +119,21 @@ func bootstrapDatabase(db *sql.DB) error {
 		CREATE TABLE IF NOT EXISTS metrics (
     		id VARCHAR(256),
 		    mtype VARCHAR(10),
-		    value NUMERIC(64),
+		    value NUMERIC,
 		    delta INT
 		)
 	`)
-	return row.Err()
+	if row.Err() != nil {
+		return errors.Wrap(row.Err(), "unable to create table 'metrics'")
+	}
+
+	row = db.QueryRow(`
+		CREATE UNIQUE INDEX IF NOT EXISTS id_mtype_index
+		ON metrics (id, mtype)
+	`)
+	if row.Err() != nil {
+		return errors.Wrap(row.Err(), "unable to create index for table 'metrics'")
+	}
+
+	return nil
 }
