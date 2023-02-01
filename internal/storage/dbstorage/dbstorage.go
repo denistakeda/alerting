@@ -120,7 +120,7 @@ func bootstrapDatabase(db *sql.DB) error {
     		id VARCHAR(256),
 		    mtype VARCHAR(10),
 		    value NUMERIC,
-		    delta INT
+		    delta BIGINT
 		)
 	`)
 	if row.Err() != nil {
