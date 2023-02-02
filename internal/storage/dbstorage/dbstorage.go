@@ -2,21 +2,21 @@ package dbstorage
 
 import (
 	"context"
-	"database/sql"
 	"github.com/denistakeda/alerting/internal/metric"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"log"
 	"time"
 )
 
 type DBStorage struct {
-	db      *sql.DB
+	db      *sqlx.DB
 	hashKey string
 }
 
 func New(ctx context.Context, dsn string, hashKey string) (*DBStorage, error) {
-	db, err := sql.Open("pgx", dsn)
+	db, err := sqlx.Connect("pgx", dsn)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to connect to database")
 	}
@@ -30,40 +30,45 @@ func New(ctx context.Context, dsn string, hashKey string) (*DBStorage, error) {
 
 func (dbs *DBStorage) Get(ctx context.Context, metricType metric.Type, metricName string) (*metric.Metric, bool) {
 	var met metric.Metric
-	err := dbs.db.QueryRowContext(ctx, `
-		SELECT id, mtype, value, delta
+	err := dbs.db.GetContext(ctx, &met, `
+		SELECT *
 		FROM metrics
 		WHERE id=$1 AND mtype=$2
-	`, metricName, metricType).
-		Scan(&met.ID, &met.MType, &met.Value, &met.Delta)
+	`, metricName, metricType)
+
 	if err != nil {
 		return nil, false
 	}
+
 	met.FillHash(dbs.hashKey)
+
 	return &met, true
 }
 
 func (dbs *DBStorage) Update(ctx context.Context, met *metric.Metric) (*metric.Metric, error) {
 	oldMet, ok := dbs.Get(ctx, met.Type(), met.Name())
 	newMet := metric.Update(oldMet, met)
-	var row *sql.Row
+	var err error
 	if ok {
-		row = dbs.db.QueryRowContext(ctx, `
+		_, err = dbs.db.NamedExecContext(ctx, `
 			UPDATE metrics
-			SET value = $1,
-				delta = $2
-			WHERE id = $3 AND mtype = $4
-		`, newMet.Value, newMet.Delta, newMet.ID, newMet.MType)
+			SET value = :value,
+				delta = :delta 
+			WHERE id = :id AND mtype = :mtype 
+		`, newMet)
 	} else {
-		row = dbs.db.QueryRowContext(ctx, `
+		_, err = dbs.db.NamedExecContext(ctx, `
 			INSERT INTO metrics (id, mtype, value, delta)
-			VALUES ($1, $2, $3, $4)
-		`, newMet.ID, newMet.MType, newMet.Value, newMet.Delta)
+			VALUES (:id, :mtype, :value, :delta)
+		`, newMet)
 	}
-	if row.Err() != nil {
-		return nil, errors.Wrap(row.Err(), "unable to update metric")
+
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to update metric")
 	}
+
 	newMet.FillHash(dbs.hashKey)
+
 	return newMet, nil
 }
 
@@ -71,30 +76,12 @@ func (dbs *DBStorage) Update(ctx context.Context, met *metric.Metric) (*metric.M
 func (dbs *DBStorage) All(ctx context.Context) []*metric.Metric {
 	result := make([]*metric.Metric, 0)
 
-	rows, err := dbs.db.QueryContext(ctx, `
-		SELECT id, mtype, value, delta
+	err := dbs.db.SelectContext(ctx, &result, `
+		SELECT *
 		FROM metrics
 	`)
 	if err != nil {
 		log.Println("failed to query list of all metrics")
-		return result
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var m metric.Metric
-		err = rows.Scan(&m.ID, &m.MType, &m.Value, &m.Delta)
-		if err != nil {
-			log.Println("failed to parse metric")
-			continue
-		}
-		m.FillHash(dbs.hashKey)
-		result = append(result, &m)
-	}
-
-	err = rows.Err()
-	if err != nil {
-		log.Println("error while iterate over list of metrics")
 		return result
 	}
 
@@ -114,25 +101,21 @@ func (dbs *DBStorage) Close(_ context.Context) error {
 	return dbs.db.Close()
 }
 
-func bootstrapDatabase(ctx context.Context, db *sql.DB) error {
+func bootstrapDatabase(ctx context.Context, db *sqlx.DB) error {
 	_, err := db.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS metrics (
     		id VARCHAR(256),
 		    mtype VARCHAR(10),
 		    value NUMERIC,
 		    delta BIGINT
-		)
-	`)
-	if err != nil {
-		return errors.Wrap(err, "unable to create table 'metrics'")
-	}
+		);
 
-	_, err = db.ExecContext(ctx, `
 		CREATE UNIQUE INDEX IF NOT EXISTS id_mtype_index
 		ON metrics (id, mtype)
 	`)
+
 	if err != nil {
-		return errors.Wrap(err, "unable to create index for table 'metrics'")
+		return errors.Wrap(err, "unable to create table 'metrics'")
 	}
 
 	return nil

@@ -18,11 +18,11 @@ const (
 )
 
 type Metric struct {
-	ID    string   `json:"id"`
-	MType Type     `json:"type"`
-	Value *float64 `json:"value,omitempty"`
-	Delta *int64   `json:"delta,omitempty"`
-	Hash  string   `json:"hash,omitempty"`
+	ID    string   `json:"id" db:"id"`
+	MType Type     `json:"type" db:"mtype"`
+	Value *float64 `json:"value,omitempty" db:"value"`
+	Delta *int64   `json:"delta,omitempty" db:"delta"`
+	Hash  string   `json:"hash,omitempty" db:"-"`
 }
 
 func NewGauge(name string, value float64) *Metric {
