@@ -115,7 +115,7 @@ func (dbs *DBStorage) Close() error {
 }
 
 func bootstrapDatabase(db *sql.DB) error {
-	row := db.QueryRow(`
+	_, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS metrics (
     		id VARCHAR(256),
 		    mtype VARCHAR(10),
@@ -123,16 +123,16 @@ func bootstrapDatabase(db *sql.DB) error {
 		    delta BIGINT
 		)
 	`)
-	if row.Err() != nil {
-		return errors.Wrap(row.Err(), "unable to create table 'metrics'")
+	if err != nil {
+		return errors.Wrap(err, "unable to create table 'metrics'")
 	}
 
-	row = db.QueryRow(`
+	_, err = db.Exec(`
 		CREATE UNIQUE INDEX IF NOT EXISTS id_mtype_index
 		ON metrics (id, mtype)
 	`)
-	if row.Err() != nil {
-		return errors.Wrap(row.Err(), "unable to create index for table 'metrics'")
+	if err != nil {
+		return errors.Wrap(err, "unable to create index for table 'metrics'")
 	}
 
 	return nil
