@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/denistakeda/alerting/internal/config/server"
 	"github.com/denistakeda/alerting/internal/handler"
 	s "github.com/denistakeda/alerting/internal/storage"
@@ -42,7 +43,7 @@ func main() {
 }
 
 func stopServer(storage s.Storage) {
-	if err := storage.Close(); err != nil {
+	if err := storage.Close(context.Background()); err != nil {
 		log.Printf("Unable to properly stop the storage: %v\n", err)
 	}
 }
@@ -81,9 +82,9 @@ func handleInterrupt() <-chan os.Signal {
 
 func getStorage(conf servercfg.Config) (s.Storage, error) {
 	if conf.DatabaseDSN != "" {
-		return dbstorage.New(conf.DatabaseDSN, conf.Key)
+		return dbstorage.New(context.Background(), conf.DatabaseDSN, conf.Key)
 	} else if conf.StoreFile != "" {
-		return filestorage.New(conf.StoreFile, conf.StoreInterval, conf.Restore, conf.Key)
+		return filestorage.New(context.Background(), conf.StoreFile, conf.StoreInterval, conf.Restore, conf.Key)
 	} else {
 		return memstorage.New(conf.Key), nil
 	}

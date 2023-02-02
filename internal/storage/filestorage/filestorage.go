@@ -19,14 +19,20 @@ type Filestorage struct {
 	storeTicker *time.Ticker
 }
 
-func New(storeFile string, storeInterval time.Duration, restore bool, hashKey string) (*Filestorage, error) {
+func New(
+	ctx context.Context,
+	storeFile string,
+	storeInterval time.Duration,
+	restore bool,
+	hashKey string,
+) (*Filestorage, error) {
 	instance := &Filestorage{
 		mstorage:  memstorage.New(hashKey),
 		storeFile: storeFile,
 	}
 
 	if restore {
-		if err := instance.restore(); err != nil {
+		if err := instance.restore(ctx); err != nil {
 			return nil, errors.Wrap(err, "unable to initiate a Filestorage")
 		}
 	}
@@ -35,7 +41,7 @@ func New(storeFile string, storeInterval time.Duration, restore bool, hashKey st
 		instance.storeTicker = time.NewTicker(storeInterval)
 		go func() {
 			for range instance.storeTicker.C {
-				instance.dump()
+				instance.dump(ctx)
 			}
 		}()
 	}
@@ -43,36 +49,36 @@ func New(storeFile string, storeInterval time.Duration, restore bool, hashKey st
 	return instance, nil
 }
 
-func (fs *Filestorage) Get(metricType metric.Type, metricName string) (*metric.Metric, bool) {
-	return fs.mstorage.Get(metricType, metricName)
+func (fs *Filestorage) Get(ctx context.Context, metricType metric.Type, metricName string) (*metric.Metric, bool) {
+	return fs.mstorage.Get(ctx, metricType, metricName)
 }
 
-func (fs *Filestorage) Update(updatedMetric *metric.Metric) (*metric.Metric, error) {
-	res, err := fs.mstorage.Update(updatedMetric)
+func (fs *Filestorage) Update(ctx context.Context, updatedMetric *metric.Metric) (*metric.Metric, error) {
+	res, err := fs.mstorage.Update(ctx, updatedMetric)
 	if fs.storeTicker == nil {
-		fs.dump()
+		fs.dump(ctx)
 	}
 	return res, err
 }
 
-func (fs *Filestorage) All() []*metric.Metric {
-	return fs.mstorage.All()
+func (fs *Filestorage) All(ctx context.Context) []*metric.Metric {
+	return fs.mstorage.All(ctx)
 }
 
-func (fs *Filestorage) Close() error {
+func (fs *Filestorage) Close(ctx context.Context) error {
 	fs.storeTicker.Stop()
-	fs.dump()
-	return fs.mstorage.Close()
+	fs.dump(ctx)
+	return fs.mstorage.Close(ctx)
 }
 
-func (fs *Filestorage) Ping(ctx context.Context) error {
+func (fs *Filestorage) Ping(_ context.Context) error {
 	// For file storage there is no need to do anything on ping
 	return nil
 }
 
-func (fs *Filestorage) dump() {
+func (fs *Filestorage) dump(ctx context.Context) {
 	logPrefix := "Filestorage: failed to dump data"
-	ms := fs.All()
+	ms := fs.All(ctx)
 	if len(ms) == 0 {
 		return
 	}
@@ -97,7 +103,7 @@ func (fs *Filestorage) dump() {
 	}
 }
 
-func (fs *Filestorage) restore() error {
+func (fs *Filestorage) restore(ctx context.Context) error {
 	file, err := os.OpenFile(fs.storeFile, os.O_RDONLY|os.O_CREATE, 0777)
 	if err != nil {
 		return errors.Wrapf(err, "Failestorage: failed to restore data from file %s", fs.storeFile)
@@ -118,6 +124,6 @@ func (fs *Filestorage) restore() error {
 		if err != nil {
 			return errors.Wrapf(err, "Failestorage: failed to restore data from file %s", fs.storeFile)
 		}
-		fs.mstorage.Replace(&m)
+		fs.mstorage.Replace(ctx, &m)
 	}
 }

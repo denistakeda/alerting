@@ -15,22 +15,22 @@ type DBStorage struct {
 	hashKey string
 }
 
-func New(dsn string, hashKey string) (*DBStorage, error) {
+func New(ctx context.Context, dsn string, hashKey string) (*DBStorage, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to connect to database")
 	}
 
-	if err := bootstrapDatabase(db); err != nil {
+	if err := bootstrapDatabase(ctx, db); err != nil {
 		return nil, errors.Wrap(err, "failed to bootstrap database")
 	}
 
 	return &DBStorage{db: db, hashKey: hashKey}, nil
 }
 
-func (dbs *DBStorage) Get(metricType metric.Type, metricName string) (*metric.Metric, bool) {
+func (dbs *DBStorage) Get(ctx context.Context, metricType metric.Type, metricName string) (*metric.Metric, bool) {
 	var met metric.Metric
-	err := dbs.db.QueryRow(`
+	err := dbs.db.QueryRowContext(ctx, `
 		SELECT id, mtype, value, delta
 		FROM metrics
 		WHERE id=$1 AND mtype=$2
@@ -43,19 +43,19 @@ func (dbs *DBStorage) Get(metricType metric.Type, metricName string) (*metric.Me
 	return &met, true
 }
 
-func (dbs *DBStorage) Update(met *metric.Metric) (*metric.Metric, error) {
-	oldMet, ok := dbs.Get(met.Type(), met.Name())
+func (dbs *DBStorage) Update(ctx context.Context, met *metric.Metric) (*metric.Metric, error) {
+	oldMet, ok := dbs.Get(ctx, met.Type(), met.Name())
 	newMet := metric.Update(oldMet, met)
 	var row *sql.Row
 	if ok {
-		row = dbs.db.QueryRow(`
+		row = dbs.db.QueryRowContext(ctx, `
 			UPDATE metrics
 			SET value = $1,
 				delta = $2
 			WHERE id = $3 AND mtype = $4
 		`, newMet.Value, newMet.Delta, newMet.ID, newMet.MType)
 	} else {
-		row = dbs.db.QueryRow(`
+		row = dbs.db.QueryRowContext(ctx, `
 			INSERT INTO metrics (id, mtype, value, delta)
 			VALUES ($1, $2, $3, $4)
 		`, newMet.ID, newMet.MType, newMet.Value, newMet.Delta)
@@ -68,10 +68,10 @@ func (dbs *DBStorage) Update(met *metric.Metric) (*metric.Metric, error) {
 }
 
 // TODO: return error
-func (dbs *DBStorage) All() []*metric.Metric {
+func (dbs *DBStorage) All(ctx context.Context) []*metric.Metric {
 	result := make([]*metric.Metric, 0)
 
-	rows, err := dbs.db.Query(`
+	rows, err := dbs.db.QueryContext(ctx, `
 		SELECT id, mtype, value, delta
 		FROM metrics
 	`)
@@ -110,12 +110,12 @@ func (dbs *DBStorage) Ping(ctx context.Context) error {
 	return nil
 }
 
-func (dbs *DBStorage) Close() error {
+func (dbs *DBStorage) Close(_ context.Context) error {
 	return dbs.db.Close()
 }
 
-func bootstrapDatabase(db *sql.DB) error {
-	_, err := db.Exec(`
+func bootstrapDatabase(ctx context.Context, db *sql.DB) error {
+	_, err := db.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS metrics (
     		id VARCHAR(256),
 		    mtype VARCHAR(10),
@@ -127,7 +127,7 @@ func bootstrapDatabase(db *sql.DB) error {
 		return errors.Wrap(err, "unable to create table 'metrics'")
 	}
 
-	_, err = db.Exec(`
+	_, err = db.ExecContext(ctx, `
 		CREATE UNIQUE INDEX IF NOT EXISTS id_mtype_index
 		ON metrics (id, mtype)
 	`)

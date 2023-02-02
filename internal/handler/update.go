@@ -40,7 +40,7 @@ func (h *Handler) UpdateMetricHandler(c *gin.Context) {
 		return
 	}
 
-	if _, err := h.storage.Update(m); err != nil {
+	if _, err := h.storage.Update(c, m); err != nil {
 		log.Println(c.AbortWithError(http.StatusBadRequest, err))
 	}
 	c.Status(http.StatusOK)
@@ -62,7 +62,7 @@ func (h *Handler) UpdateMetricHandler2(c *gin.Context) {
 		return
 	}
 
-	m, err := h.storage.Update(m)
+	m, err := h.storage.Update(c, m)
 	if err != nil {
 		log.Println(c.AbortWithError(http.StatusInternalServerError, err))
 		return

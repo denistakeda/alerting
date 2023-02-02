@@ -19,7 +19,7 @@ func New(hashKey string) *Memstorage {
 	}
 }
 
-func (m *Memstorage) Get(metricType metric.Type, metricName string) (*metric.Metric, bool) {
+func (m *Memstorage) Get(_ context.Context, metricType metric.Type, metricName string) (*metric.Metric, bool) {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 
@@ -32,7 +32,7 @@ func (m *Memstorage) Get(metricType metric.Type, metricName string) (*metric.Met
 	return met, ok
 }
 
-func (m *Memstorage) Update(updatedMetric *metric.Metric) (*metric.Metric, error) {
+func (m *Memstorage) Update(_ context.Context, updatedMetric *metric.Metric) (*metric.Metric, error) {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 
@@ -48,7 +48,7 @@ func (m *Memstorage) Update(updatedMetric *metric.Metric) (*metric.Metric, error
 	return res, nil
 }
 
-func (m *Memstorage) Replace(met *metric.Metric) {
+func (m *Memstorage) Replace(_ context.Context, met *metric.Metric) {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 
@@ -61,7 +61,7 @@ func (m *Memstorage) Replace(met *metric.Metric) {
 	met.FillHash(m.hashKey)
 }
 
-func (m *Memstorage) All() []*metric.Metric {
+func (m *Memstorage) All(_ context.Context) []*metric.Metric {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 
@@ -74,12 +74,12 @@ func (m *Memstorage) All() []*metric.Metric {
 	return res
 }
 
-func (m *Memstorage) Close() error {
+func (m *Memstorage) Close(_ context.Context) error {
 	// For memory storage there is no need to do anything on close
 	return nil
 }
 
-func (m *Memstorage) Ping(ctx context.Context) error {
+func (m *Memstorage) Ping(_ context.Context) error {
 	// For memory storage there is no need to do anything on ping
 	return nil
 }

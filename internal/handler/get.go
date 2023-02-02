@@ -25,7 +25,7 @@ func (h *Handler) GetMetricHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
-	m, ok := h.storage.Get(metricType, uri.MetricName)
+	m, ok := h.storage.Get(c, metricType, uri.MetricName)
 	if !ok {
 		c.AbortWithStatus(http.StatusNotFound)
 		return
@@ -39,7 +39,7 @@ func (h *Handler) GetMetricHandler2(c *gin.Context) {
 		log.Println(c.AbortWithError(http.StatusBadRequest, err))
 		return
 	}
-	m, ok := h.storage.Get(requestMetric.Type(), requestMetric.Name())
+	m, ok := h.storage.Get(c, requestMetric.Type(), requestMetric.Name())
 	if !ok {
 		c.AbortWithStatusJSON(http.StatusNotFound, requestMetric)
 		return

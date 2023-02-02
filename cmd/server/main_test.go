@@ -71,7 +71,7 @@ func Test_updateMetric(t *testing.T) {
 			defer ctrl.Finish()
 
 			s := mocks.NewMockStorage(ctrl)
-			s.EXPECT().Update(tt.met).Return(tt.met, nil).AnyTimes()
+			s.EXPECT().Update(gomock.Any(), tt.met).Return(tt.met, nil).AnyTimes()
 
 			router := setupRouter(s, "")
 
@@ -154,7 +154,7 @@ func Test_getMetric(t *testing.T) {
 
 			s := mocks.NewMockStorage(ctrl)
 			s.EXPECT().
-				Get(tt.storageMock.reqType, tt.storageMock.reqName).
+				Get(gomock.Any(), tt.storageMock.reqType, tt.storageMock.reqName).
 				Return(tt.storageMock.retMetric, tt.storageMock.retOk).
 				AnyTimes()
 
@@ -253,7 +253,7 @@ func Test_update(t *testing.T) {
 
 			s := mocks.NewMockStorage(ctrl)
 			s.EXPECT().
-				Update(tt.storageMock.reqMetric).
+				Update(gomock.Any(), tt.storageMock.reqMetric).
 				Return(tt.storageMock.resMetric, tt.storageMock.resError).
 				AnyTimes()
 

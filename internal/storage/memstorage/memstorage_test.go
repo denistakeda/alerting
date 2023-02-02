@@ -1,6 +1,7 @@
 package memstorage
 
 import (
+	"context"
 	"testing"
 
 	"github.com/denistakeda/alerting/internal/metric"
@@ -57,7 +58,7 @@ func Test_memstorage_Get(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := create(t, tt.metrics)
-			got, ok := m.Get(tt.args.metricType, tt.args.metricName)
+			got, ok := m.Get(context.Background(), tt.args.metricType, tt.args.metricName)
 			assert.Equal(t, tt.want.ok, ok)
 			assert.Equal(t, tt.want.metric, got)
 		})
@@ -96,7 +97,7 @@ func Test_memstorage_Update(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := create(t, tt.metrics)
-			if _, err := m.Update(tt.args.updatedMetric); (err != nil) != tt.wantErr {
+			if _, err := m.Update(context.Background(), tt.args.updatedMetric); (err != nil) != tt.wantErr {
 				t.Errorf("Memstorage.Update() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -106,7 +107,7 @@ func Test_memstorage_Update(t *testing.T) {
 func create(t *testing.T, metrics []*metric.Metric) *Memstorage {
 	ms := New("")
 	for _, m := range metrics {
-		_, err := ms.Update(m)
+		_, err := ms.Update(context.Background(), m)
 		require.NoError(t, err)
 	}
 	return ms

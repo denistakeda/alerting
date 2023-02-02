@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/denistakeda/alerting/internal/config/agentcfg"
@@ -43,7 +44,7 @@ func main() {
 	}
 	reportTicker := time.NewTicker(conf.ReportInterval)
 	for range reportTicker.C {
-		sendMetrics(client, memStorage.All(), conf.Address)
+		sendMetrics(client, memStorage.All(context.Background()), conf.Address)
 	}
 }
 
@@ -81,7 +82,7 @@ func registerMetrics(memStats *runtime.MemStats, store storage.Storage) {
 }
 
 func registerMetric(store storage.Storage, m *metric.Metric) {
-	_, err := store.Update(m)
+	_, err := store.Update(context.Background(), m)
 	if err != nil {
 		log.Printf("Failed to update metric %v\n", m)
 	}
