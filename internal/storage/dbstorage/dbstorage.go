@@ -85,7 +85,7 @@ func (dbs *DBStorage) UpdateAll(ctx context.Context, metrics []*metric.Metric) e
 	stmt, err := tx.Prepare(`
 		INSERT INTO metrics (id, mtype, value, delta)
 		VALUES ($1, $2, $3, $4) 
-		ON CONFLICT ON CONSTRAINT id_mtype_unique 
+		ON CONFLICT (id, mtype)
 		DO UPDATE SET
 		    value = $3,
 			delta = metrics.delta + $4
@@ -108,7 +108,6 @@ func (dbs *DBStorage) UpdateAll(ctx context.Context, metrics []*metric.Metric) e
 
 	if err := tx.Commit(); err != nil {
 		log.Fatalf("update drivers: unable to commit: %v", err)
-		return errors.Wrap(err, "unable to commit")
 	}
 
 	return nil
@@ -149,7 +148,8 @@ func bootstrapDatabase(ctx context.Context, db *sqlx.DB) error {
     		id VARCHAR(256),
 		    mtype VARCHAR(10),
 		    value NUMERIC,
-		    delta BIGINT
+		    delta BIGINT,
+		    UNIQUE (id, mtype)
 		);
 
 		CREATE UNIQUE INDEX IF NOT EXISTS id_mtype_index
@@ -158,16 +158,6 @@ func bootstrapDatabase(ctx context.Context, db *sqlx.DB) error {
 
 	if err != nil {
 		return errors.Wrap(err, "unable to create table 'metrics'")
-	}
-
-	_, err = db.ExecContext(ctx, `
-		ALTER TABLE metrics
-		ADD CONSTRAINT id_mtype_unique UNIQUE (id, mtype)
-	`)
-
-	if err != nil {
-		// That means this constraint already exists.
-		// This is fine, no need to do anything.
 	}
 
 	return nil
