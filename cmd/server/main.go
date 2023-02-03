@@ -57,6 +57,7 @@ func setupRouter(storage s.Storage, hashKey string) *gin.Engine {
 
 	r.POST("/update/", h.UpdateMetricHandler2)
 	r.POST("/update/:metric_type/:metric_name/:metric_value", h.UpdateMetricHandler)
+	r.POST("/updates/", h.UpdateMetricsHandler)
 	r.POST("/value/", h.GetMetricHandler2)
 	r.GET("/value/:metric_type/:metric_name", h.GetMetricHandler)
 	r.GET("/ping", h.PingHandler)

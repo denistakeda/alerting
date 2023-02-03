@@ -61,6 +61,17 @@ func (fs *Filestorage) Update(ctx context.Context, updatedMetric *metric.Metric)
 	return res, err
 }
 
+func (fs *Filestorage) UpdateAll(ctx context.Context, metrics []*metric.Metric) error {
+	for _, met := range metrics {
+		_, err := fs.Update(ctx, met)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (fs *Filestorage) All(ctx context.Context) []*metric.Metric {
 	return fs.mstorage.All(ctx)
 }

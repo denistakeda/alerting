@@ -76,6 +76,44 @@ func (dbs *DBStorage) Update(ctx context.Context, met *metric.Metric) (*metric.M
 	return newMet, nil
 }
 
+func (dbs *DBStorage) UpdateAll(ctx context.Context, metrics []*metric.Metric) error {
+	tx, err := dbs.db.BeginTx(ctx, nil)
+	if err != nil {
+		return errors.Wrap(err, "failed to start a transaction")
+	}
+
+	stmt, err := tx.Prepare(`
+		INSERT INTO metrics (id, mtype, value, delta)
+		VALUES ($1, $2, $3, $4) 
+		ON CONFLICT ON CONSTRAINT id_mtype_unique 
+		DO UPDATE SET
+		    value = $3,
+			delta = metrics.delta + $4
+	`)
+
+	if err != nil {
+		return errors.Wrap(err, "failed to prepare the update query")
+	}
+
+	defer stmt.Close()
+
+	for _, met := range metrics {
+		if _, err := stmt.Exec(met.ID, met.MType, met.Value, met.Delta); err != nil {
+			if err := tx.Rollback(); err != nil {
+				log.Fatalf("update drivers: unable to rollback: %v", err)
+			}
+			return errors.Wrapf(err, "failed to exec query with metric %v", met)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Fatalf("update drivers: unable to commit: %v", err)
+		return errors.Wrap(err, "unable to commit")
+	}
+
+	return nil
+}
+
 // TODO: return error
 func (dbs *DBStorage) All(ctx context.Context) []*metric.Metric {
 	result := make([]*metric.Metric, 0)
@@ -120,6 +158,16 @@ func bootstrapDatabase(ctx context.Context, db *sqlx.DB) error {
 
 	if err != nil {
 		return errors.Wrap(err, "unable to create table 'metrics'")
+	}
+
+	_, err = db.ExecContext(ctx, `
+		ALTER TABLE metrics
+		ADD CONSTRAINT id_mtype_unique UNIQUE (id, mtype)
+	`)
+
+	if err != nil {
+		// That means this constraint already exists.
+		// This is fine, no need to do anything.
 	}
 
 	return nil

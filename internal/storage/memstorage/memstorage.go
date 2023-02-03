@@ -48,6 +48,14 @@ func (m *Memstorage) Update(_ context.Context, updatedMetric *metric.Metric) (*m
 	return res, nil
 }
 
+func (m *Memstorage) UpdateAll(ctx context.Context, metrics []*metric.Metric) error {
+	for _, met := range metrics {
+		_, _ = m.Update(ctx, met)
+	}
+
+	return nil
+}
+
 func (m *Memstorage) Replace(_ context.Context, met *metric.Metric) {
 	m.mx.Lock()
 	defer m.mx.Unlock()

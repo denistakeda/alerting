@@ -71,6 +71,32 @@ func (h *Handler) UpdateMetricHandler2(c *gin.Context) {
 	c.JSON(http.StatusOK, m)
 }
 
+func (h *Handler) UpdateMetricsHandler(c *gin.Context) {
+	var metrics []*metric.Metric
+	if err := c.ShouldBind(&metrics); err != nil {
+		log.Println(c.AbortWithError(http.StatusBadRequest, err))
+		return
+	}
+	for _, m := range metrics {
+		if err := m.Validate(); err != nil {
+			log.Println(c.AbortWithError(http.StatusBadRequest, err))
+			return
+		}
+		if err := m.VerifyHash(h.hashKey); err != nil {
+			log.Println(c.AbortWithError(http.StatusBadRequest, err))
+			return
+		}
+	}
+
+	if err := h.storage.UpdateAll(c, metrics); err != nil {
+		log.Println(c.AbortWithError(http.StatusInternalServerError, err))
+		return
+	}
+
+	c.Status(http.StatusOK)
+
+}
+
 func createMetric(uri updateMetricURI) (*metric.Metric, error) {
 	switch uri.MetricType {
 	case "gauge":
