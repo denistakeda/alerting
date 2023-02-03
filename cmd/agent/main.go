@@ -90,25 +90,21 @@ func registerMetric(store storage.Storage, m *metric.Metric) {
 
 func sendMetrics(client *http.Client, metrics []*metric.Metric, server string) {
 	startTime := time.Now()
-	for _, m := range metrics {
-		m := m
-		func() {
-			url := fmt.Sprintf("%s/update/", server)
-			m, err := json.Marshal(m)
-			if err != nil {
-				log.Printf("failed to marshal metric: %v\n", m)
-			}
-			body := bytes.NewBuffer(m)
-			resp, err := client.Post(url, "application/json", body)
-			if err != nil {
-				log.Printf("unable to file a request to URL: %s, error: %v, metric: %v\n", url, err, string(m))
-				return
-			}
-			if err := resp.Body.Close(); err != nil {
-				log.Print("unable to close a body")
-				return
-			}
-		}()
+
+	url := fmt.Sprintf("%s/updates/", server)
+	m, err := json.Marshal(metrics)
+	if err != nil {
+		log.Println("failed to marshal metrics")
+	}
+	body := bytes.NewBuffer(m)
+	resp, err := client.Post(url, "application/json", body)
+	if err != nil {
+		log.Printf("unable to file a request to URL: %s, error: %v, metric: %v\n", url, err, string(m))
+		return
+	}
+	if err := resp.Body.Close(); err != nil {
+		log.Print("unable to close a body")
+		return
 	}
 	now := time.Now()
 	log.Printf("successfully updated %d metrics in %f seconds", len(metrics), now.Sub(startTime).Seconds())
