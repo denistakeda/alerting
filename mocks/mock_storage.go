@@ -106,3 +106,17 @@ func (mr *MockStorageMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockStorage)(nil).Update), arg0, arg1)
 }
+
+// UpdateAll mocks base method.
+func (m *MockStorage) UpdateAll(arg0 context.Context, arg1 []*metric.Metric) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAll", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateAll indicates an expected call of UpdateAll.
+func (mr *MockStorageMockRecorder) UpdateAll(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAll", reflect.TypeOf((*MockStorage)(nil).UpdateAll), arg0, arg1)
+}
