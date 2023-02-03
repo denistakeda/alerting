@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/denistakeda/alerting/internal/services/logger_service"
 	"github.com/denistakeda/alerting/mocks"
 	"github.com/golang/mock/gomock"
 	"net/http"
@@ -73,7 +74,7 @@ func Test_updateMetric(t *testing.T) {
 			s := mocks.NewMockStorage(ctrl)
 			s.EXPECT().Update(gomock.Any(), tt.met).Return(tt.met, nil).AnyTimes()
 
-			router := setupRouter(s, "")
+			router := setupRouter(s, "", logger_service.New())
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("POST", tt.request, nil)
@@ -158,7 +159,7 @@ func Test_getMetric(t *testing.T) {
 				Return(tt.storageMock.retMetric, tt.storageMock.retOk).
 				AnyTimes()
 
-			router := setupRouter(s, "")
+			router := setupRouter(s, "", logger_service.New())
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", tt.request, nil)
@@ -257,7 +258,7 @@ func Test_update(t *testing.T) {
 				Return(tt.storageMock.resMetric, tt.storageMock.resError).
 				AnyTimes()
 
-			router := setupRouter(s, "")
+			router := setupRouter(s, "", logger_service.New())
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("POST", "/update/", bytes.NewBuffer(tt.requestBody))
