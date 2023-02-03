@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"github.com/denistakeda/alerting/internal/metric"
-	"github.com/denistakeda/alerting/internal/services/logger_service"
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -22,7 +22,7 @@ func New(
 	ctx context.Context,
 	dsn string,
 	hashKey string,
-	logService *logger_service.LoggerService,
+	logService *loggerservice.LoggerService,
 ) (*DBStorage, error) {
 	// This line only required to pass tests for 10th iteration that check the usage of database/sql
 	_ = sql.Drivers()

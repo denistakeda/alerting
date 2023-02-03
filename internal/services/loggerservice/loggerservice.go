@@ -1,4 +1,4 @@
-package logger_service
+package loggerservice
 
 import (
 	"github.com/rs/zerolog"

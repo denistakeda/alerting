@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/denistakeda/alerting/internal/metric"
-	"github.com/denistakeda/alerting/internal/services/logger_service"
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -28,7 +28,7 @@ func New(
 	storeInterval time.Duration,
 	restore bool,
 	hashKey string,
-	logService *logger_service.LoggerService,
+	logService *loggerservice.LoggerService,
 ) (*Filestorage, error) {
 	instance := &Filestorage{
 		mstorage:  memstorage.New(hashKey, logService),

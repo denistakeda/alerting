@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/denistakeda/alerting/internal/config/server"
 	"github.com/denistakeda/alerting/internal/handler"
-	"github.com/denistakeda/alerting/internal/services/logger_service"
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	s "github.com/denistakeda/alerting/internal/storage"
 	"github.com/denistakeda/alerting/internal/storage/dbstorage"
 	"github.com/denistakeda/alerting/internal/storage/filestorage"
@@ -25,7 +25,7 @@ func main() {
 	}
 	log.Printf("configuration: %v", conf)
 
-	logService := logger_service.New()
+	logService := loggerservice.New()
 
 	storage, err := getStorage(conf, logService)
 	if err != nil {
@@ -52,7 +52,7 @@ func stopServer(storage s.Storage) {
 	}
 }
 
-func setupRouter(storage s.Storage, hashKey string, logService *logger_service.LoggerService) *gin.Engine {
+func setupRouter(storage s.Storage, hashKey string, logService *loggerservice.LoggerService) *gin.Engine {
 	r := gin.New()
 
 	r.RedirectTrailingSlash = false
@@ -88,7 +88,7 @@ func handleInterrupt() <-chan os.Signal {
 	return out
 }
 
-func getStorage(conf servercfg.Config, logService *logger_service.LoggerService) (s.Storage, error) {
+func getStorage(conf servercfg.Config, logService *loggerservice.LoggerService) (s.Storage, error) {
 	if conf.DatabaseDSN != "" {
 		return dbstorage.New(context.Background(), conf.DatabaseDSN, conf.Key, logService)
 	} else if conf.StoreFile != "" {

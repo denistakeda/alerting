@@ -2,7 +2,7 @@ package memstorage
 
 import (
 	"context"
-	"github.com/denistakeda/alerting/internal/services/logger_service"
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	"testing"
 
 	"github.com/denistakeda/alerting/internal/metric"
@@ -106,7 +106,7 @@ func Test_memstorage_Update(t *testing.T) {
 }
 
 func create(t *testing.T, metrics []*metric.Metric) *Memstorage {
-	ms := New("", logger_service.New())
+	ms := New("", loggerservice.New())
 	for _, m := range metrics {
 		_, err := ms.Update(context.Background(), m)
 		require.NoError(t, err)

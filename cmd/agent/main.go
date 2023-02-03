@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/denistakeda/alerting/internal/config/agentcfg"
-	"github.com/denistakeda/alerting/internal/services/logger_service"
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	"github.com/rs/zerolog"
 	"log"
 	"math/rand"
@@ -25,7 +25,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	logService := logger_service.New()
+	logService := loggerservice.New()
 	logger := logService.ComponentLogger("Agent")
 
 	logger.Info().Msgf("configuration: %v", conf)

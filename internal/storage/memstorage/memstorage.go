@@ -3,7 +3,7 @@ package memstorage
 import (
 	"context"
 	"github.com/denistakeda/alerting/internal/metric"
-	"github.com/denistakeda/alerting/internal/services/logger_service"
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	"github.com/rs/zerolog"
 	"sync"
 )
@@ -15,7 +15,7 @@ type Memstorage struct {
 	logger  zerolog.Logger
 }
 
-func New(hashKey string, logService *logger_service.LoggerService) *Memstorage {
+func New(hashKey string, logService *loggerservice.LoggerService) *Memstorage {
 	return &Memstorage{
 		types:   make(map[metric.Type]map[string]*metric.Metric),
 		hashKey: hashKey,

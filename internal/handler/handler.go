@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"github.com/denistakeda/alerting/internal/services/logger_service"
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	s "github.com/denistakeda/alerting/internal/storage"
 	"github.com/rs/zerolog"
 )
@@ -15,7 +15,7 @@ type Handler struct {
 func New(
 	storage s.Storage,
 	hashKey string,
-	logService *logger_service.LoggerService,
+	logService *loggerservice.LoggerService,
 ) *Handler {
 	return &Handler{
 		storage: storage,
