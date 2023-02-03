@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/denistakeda/alerting/internal/metric"
+	"github.com/denistakeda/alerting/internal/services/logger_service"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"io"
-	"log"
 	"os"
 	"time"
 )
@@ -17,6 +18,8 @@ type Filestorage struct {
 
 	storeFile   string
 	storeTicker *time.Ticker
+
+	logger zerolog.Logger
 }
 
 func New(
@@ -25,10 +28,12 @@ func New(
 	storeInterval time.Duration,
 	restore bool,
 	hashKey string,
+	logService *logger_service.LoggerService,
 ) (*Filestorage, error) {
 	instance := &Filestorage{
-		mstorage:  memstorage.New(hashKey),
+		mstorage:  memstorage.New(hashKey, logService),
 		storeFile: storeFile,
+		logger:    logService.ComponentLogger("Filestorage"),
 	}
 
 	if restore {
@@ -96,20 +101,24 @@ func (fs *Filestorage) dump(ctx context.Context) {
 
 	file, err := os.OpenFile(fs.storeFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
-		log.Printf("%s: failed to open the file \"%s\"", logPrefix, fs.storeFile)
+		fs.logger.Error().Err(err).
+			Msgf("%s: failed to open the file \"%s\"", logPrefix, fs.storeFile)
+
 		return
 	}
 	defer func() {
 		err := file.Close()
 		if err != nil {
-			log.Printf("failed to close file \"%s\"", fs.storeFile)
+			fs.logger.Error().Err(err).
+				Msgf("failed to close file \"%s\"", fs.storeFile)
 		}
 	}()
 	encoder := json.NewEncoder(file)
 
 	for _, met := range ms {
 		if err := encoder.Encode(met); err != nil {
-			log.Printf("%s: failed to write metric %v to file %s: %v", logPrefix, met, fs.storeFile, err)
+			fs.logger.Error().Err(err).
+				Msgf("%s: failed to write metric %v to file %s: %v", logPrefix, met, fs.storeFile, err)
 		}
 	}
 }
@@ -122,7 +131,8 @@ func (fs *Filestorage) restore(ctx context.Context) error {
 	defer func() {
 		err := file.Close()
 		if err != nil {
-			log.Printf("failed to close file \"%s\"", fs.storeFile)
+			fs.logger.Error().Err(err).
+				Msgf("failed to close file \"%s\"", fs.storeFile)
 		}
 	}()
 	decoder := json.NewDecoder(file)

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -26,22 +25,26 @@ type updateMetricURI struct {
 func (h *Handler) UpdateMetricHandler(c *gin.Context) {
 	var uri updateMetricURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		log.Println(c.AbortWithError(http.StatusBadRequest, err))
+		h.logger.Warn().Err(err).Msg("failed to bind uri")
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	m, err := createMetric(uri)
 	if errors.Is(err, ErrUnknownMetricType) {
-		log.Println(c.AbortWithError(http.StatusNotImplemented, err))
+		h.logger.Warn().Err(err).Msg("unknown metric type")
+		c.AbortWithStatus(http.StatusNotImplemented)
 		return
 	}
 	if err != nil {
-		log.Println(c.AbortWithError(http.StatusBadRequest, err))
+		h.logger.Warn().Err(err).Msg("failed to create a metric")
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	if _, err := h.storage.Update(c, m); err != nil {
-		log.Println(c.AbortWithError(http.StatusBadRequest, err))
+		h.logger.Warn().Err(err).Msgf("failed to update a metric %v", m)
+		c.AbortWithStatus(http.StatusBadRequest)
 	}
 	c.Status(http.StatusOK)
 }
@@ -49,22 +52,26 @@ func (h *Handler) UpdateMetricHandler(c *gin.Context) {
 func (h *Handler) UpdateMetricHandler2(c *gin.Context) {
 	var m *metric.Metric
 	if err := c.ShouldBind(&m); err != nil {
-		log.Println(c.AbortWithError(http.StatusBadRequest, err))
+		h.logger.Warn().Err(err).Msg("failed to bind uri")
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 	if err := m.Validate(); err != nil {
-		log.Println(c.AbortWithError(http.StatusBadRequest, err))
+		h.logger.Warn().Err(err).Msgf("incorrect metric %v", m)
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	if err := m.VerifyHash(h.hashKey); err != nil {
-		log.Println(c.AbortWithError(http.StatusBadRequest, err))
+		h.logger.Warn().Err(err).Msgf("incorrect metric hash %v", m.Hash)
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	m, err := h.storage.Update(c, m)
 	if err != nil {
-		log.Println(c.AbortWithError(http.StatusInternalServerError, err))
+		h.logger.Warn().Err(err).Msgf("failed to update a metric %v", m)
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
@@ -74,22 +81,26 @@ func (h *Handler) UpdateMetricHandler2(c *gin.Context) {
 func (h *Handler) UpdateMetricsHandler(c *gin.Context) {
 	var metrics []*metric.Metric
 	if err := c.ShouldBind(&metrics); err != nil {
-		log.Println(c.AbortWithError(http.StatusBadRequest, err))
+		h.logger.Warn().Err(err).Msg("failed to bind uri")
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 	for _, m := range metrics {
 		if err := m.Validate(); err != nil {
-			log.Println(c.AbortWithError(http.StatusBadRequest, err))
+			h.logger.Warn().Err(err).Msgf("incorrect metric %v", m)
+			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
 		if err := m.VerifyHash(h.hashKey); err != nil {
-			log.Println(c.AbortWithError(http.StatusBadRequest, err))
+			h.logger.Warn().Err(err).Msgf("incorrect metric hash %v", m.Hash)
+			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
 	}
 
 	if err := h.storage.UpdateAll(c, metrics); err != nil {
-		log.Println(c.AbortWithError(http.StatusInternalServerError, err))
+		h.logger.Warn().Err(err).Msg("failed to update a metrics")
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 

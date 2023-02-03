@@ -4,19 +4,26 @@ import (
 	"context"
 	"database/sql"
 	"github.com/denistakeda/alerting/internal/metric"
+	"github.com/denistakeda/alerting/internal/services/logger_service"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
-	"log"
+	"github.com/rs/zerolog"
 	"time"
 )
 
 type DBStorage struct {
 	db      *sqlx.DB
 	hashKey string
+	logger  zerolog.Logger
 }
 
-func New(ctx context.Context, dsn string, hashKey string) (*DBStorage, error) {
+func New(
+	ctx context.Context,
+	dsn string,
+	hashKey string,
+	logService *logger_service.LoggerService,
+) (*DBStorage, error) {
 	// This line only required to pass tests for 10th iteration that check the usage of database/sql
 	_ = sql.Drivers()
 
@@ -29,7 +36,11 @@ func New(ctx context.Context, dsn string, hashKey string) (*DBStorage, error) {
 		return nil, errors.Wrap(err, "failed to bootstrap database")
 	}
 
-	return &DBStorage{db: db, hashKey: hashKey}, nil
+	return &DBStorage{
+		db:      db,
+		hashKey: hashKey,
+		logger:  logService.ComponentLogger("DBStorage"),
+	}, nil
 }
 
 func (dbs *DBStorage) Get(ctx context.Context, metricType metric.Type, metricName string) (*metric.Metric, bool) {
@@ -100,14 +111,14 @@ func (dbs *DBStorage) UpdateAll(ctx context.Context, metrics []*metric.Metric) e
 	for _, met := range metrics {
 		if _, err := stmt.Exec(met.ID, met.MType, met.Value, met.Delta); err != nil {
 			if err := tx.Rollback(); err != nil {
-				log.Fatalf("update drivers: unable to rollback: %v", err)
+				dbs.logger.Fatal().Err(err).Msg("update drivers: unable to rollback")
 			}
 			return errors.Wrapf(err, "failed to exec query with metric %v", met)
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		log.Fatalf("update drivers: unable to commit: %v", err)
+		dbs.logger.Fatal().Err(err).Msg("update drivers: unable to commit")
 	}
 
 	return nil
@@ -122,7 +133,7 @@ func (dbs *DBStorage) All(ctx context.Context) []*metric.Metric {
 		FROM metrics
 	`)
 	if err != nil {
-		log.Println("failed to query list of all metrics")
+		dbs.logger.Error().Err(err).Msg("failed to query list of all metrics")
 		return result
 	}
 

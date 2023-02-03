@@ -4,11 +4,13 @@ import (
 	"context"
 	"github.com/denistakeda/alerting/internal/config/server"
 	"github.com/denistakeda/alerting/internal/handler"
+	"github.com/denistakeda/alerting/internal/services/logger_service"
 	s "github.com/denistakeda/alerting/internal/storage"
 	"github.com/denistakeda/alerting/internal/storage/dbstorage"
 	"github.com/denistakeda/alerting/internal/storage/filestorage"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
 	"github.com/gin-contrib/gzip"
+	"github.com/gin-contrib/logger"
 	"github.com/gin-gonic/gin"
 	"log"
 	"os"
@@ -23,12 +25,14 @@ func main() {
 	}
 	log.Printf("configuration: %v", conf)
 
-	storage, err := getStorage(conf)
+	logService := logger_service.New()
+
+	storage, err := getStorage(conf, logService)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	r := setupRouter(storage, conf.Key)
+	r := setupRouter(storage, conf.Key, logService)
 	r.LoadHTMLGlob("internal/templates/*")
 	serverChan := runServer(r, conf.Address)
 	interruptChan := handleInterrupt()
@@ -48,12 +52,15 @@ func stopServer(storage s.Storage) {
 	}
 }
 
-func setupRouter(storage s.Storage, hashKey string) *gin.Engine {
-	r := gin.Default()
+func setupRouter(storage s.Storage, hashKey string, logService *logger_service.LoggerService) *gin.Engine {
+	r := gin.New()
+
 	r.RedirectTrailingSlash = false
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
+	r.Use(gin.Recovery())
+	r.Use(logger.SetLogger())
 
-	h := handler.New(storage, hashKey)
+	h := handler.New(storage, hashKey, logService)
 
 	r.POST("/update/", h.UpdateMetricHandler2)
 	r.POST("/update/:metric_type/:metric_name/:metric_value", h.UpdateMetricHandler)
@@ -81,12 +88,12 @@ func handleInterrupt() <-chan os.Signal {
 	return out
 }
 
-func getStorage(conf servercfg.Config) (s.Storage, error) {
+func getStorage(conf servercfg.Config, logService *logger_service.LoggerService) (s.Storage, error) {
 	if conf.DatabaseDSN != "" {
-		return dbstorage.New(context.Background(), conf.DatabaseDSN, conf.Key)
+		return dbstorage.New(context.Background(), conf.DatabaseDSN, conf.Key, logService)
 	} else if conf.StoreFile != "" {
-		return filestorage.New(context.Background(), conf.StoreFile, conf.StoreInterval, conf.Restore, conf.Key)
+		return filestorage.New(context.Background(), conf.StoreFile, conf.StoreInterval, conf.Restore, conf.Key, logService)
 	} else {
-		return memstorage.New(conf.Key), nil
+		return memstorage.New(conf.Key, logService), nil
 	}
 }

@@ -2,13 +2,13 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
-	"log"
 	"net/http"
 )
 
 func (h *Handler) PingHandler(c *gin.Context) {
 	if err := h.storage.Ping(c); err != nil {
-		log.Println(c.AbortWithError(http.StatusInternalServerError, err))
+		h.logger.Error().Err(err).Msg("failed to ping database")
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 	c.String(http.StatusOK, "pong")
