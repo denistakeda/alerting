@@ -1,0 +1,29 @@
+services:
+  server:
+    image: cosmtrek/air
+    depends_on:
+      - database
+    working_dir: /server
+    environment:
+      - DATABASE_DSN=postgresql://postgres:postgres@database:5432/postgres?sslmode=disable
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./:/server/
+
+  database:
+    image: postgres:latest
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - 15432:5432
+    volumes:
+      - db:/var/lib/postgresql/data/
+
+volumes:
+  db:
+    driver: local
+
