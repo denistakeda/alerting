@@ -5,6 +5,9 @@ import (
 	"database/sql"
 	"github.com/denistakeda/alerting/internal/metric"
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -19,7 +22,6 @@ type DBStorage struct {
 }
 
 func New(
-	ctx context.Context,
 	dsn string,
 	hashKey string,
 	logService *loggerservice.LoggerService,
@@ -32,7 +34,7 @@ func New(
 		return nil, errors.Wrap(err, "unable to connect to database")
 	}
 
-	if err := bootstrapDatabase(ctx, db); err != nil {
+	if err := bootstrapDatabase(dsn); err != nil {
 		return nil, errors.Wrap(err, "failed to bootstrap database")
 	}
 
@@ -153,22 +155,14 @@ func (dbs *DBStorage) Close(_ context.Context) error {
 	return dbs.db.Close()
 }
 
-func bootstrapDatabase(ctx context.Context, db *sqlx.DB) error {
-	_, err := db.ExecContext(ctx, `
-		CREATE TABLE IF NOT EXISTS metrics (
-    		id VARCHAR(256),
-		    mtype VARCHAR(10),
-		    value NUMERIC,
-		    delta BIGINT,
-		    UNIQUE (id, mtype)
-		);
-
-		CREATE UNIQUE INDEX IF NOT EXISTS id_mtype_index
-		ON metrics (id, mtype)
-	`)
-
+func bootstrapDatabase(dsn string) error {
+	m, err := migrate.New("file://migrations", dsn)
 	if err != nil {
-		return errors.Wrap(err, "unable to create table 'metrics'")
+		return errors.Wrap(err, "failed to create a migration instance")
+	}
+
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return errors.Wrap(err, "failed to migrate database")
 	}
 
 	return nil
