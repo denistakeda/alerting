@@ -32,7 +32,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	r := setupRouter(storage, conf.Key, logService)
+	r := newRouter()
+	apiHandler := handler.New(storage, conf.Key, logService)
+	apiHandler.RegisterHandlers(r)
+
 	r.LoadHTMLGlob("internal/templates/*")
 	serverChan := runServer(r, conf.Address)
 	interruptChan := handleInterrupt()
@@ -52,7 +55,7 @@ func stopServer(storage s.Storage) {
 	}
 }
 
-func setupRouter(storage s.Storage, hashKey string, logService *loggerservice.LoggerService) *gin.Engine {
+func newRouter() *gin.Engine {
 	r := gin.New()
 
 	r.RedirectTrailingSlash = false
@@ -60,15 +63,6 @@ func setupRouter(storage s.Storage, hashKey string, logService *loggerservice.Lo
 	r.Use(gin.Recovery())
 	r.Use(logger.SetLogger())
 
-	h := handler.New(storage, hashKey, logService)
-
-	r.POST("/update/", h.UpdateMetricHandler2)
-	r.POST("/update/:metric_type/:metric_name/:metric_value", h.UpdateMetricHandler)
-	r.POST("/updates/", h.UpdateMetricsHandler)
-	r.POST("/value/", h.GetMetricHandler2)
-	r.GET("/value/:metric_type/:metric_name", h.GetMetricHandler)
-	r.GET("/ping", h.PingHandler)
-	r.GET("/", h.MainPageHandler)
 	return r
 }
 
