@@ -136,7 +136,7 @@ func registerMetrics(store storage.Storage, logger zerolog.Logger) error {
 	}
 
 	for idx, cpuUsage := range cpus {
-		registerMetric(store, logger, metric.NewGauge(fmt.Sprintf("CPUUtilization%d", idx), cpuUsage))
+		registerMetric(store, logger, metric.NewGauge(fmt.Sprintf("CPUutilization%d", idx), cpuUsage))
 	}
 
 	return nil
