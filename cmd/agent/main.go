@@ -9,6 +9,7 @@ import (
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/shirou/gopsutil/v3/cpu"
 	"log"
 	"math/rand"
 	"net/http"
@@ -18,6 +19,7 @@ import (
 	"github.com/denistakeda/alerting/internal/metric"
 	"github.com/denistakeda/alerting/internal/storage"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 func main() {
@@ -31,19 +33,19 @@ func main() {
 
 	logger.Info().Msgf("configuration: %v", conf)
 
-	mem := &runtime.MemStats{}
 	memStorage := memstorage.NewMemStorage(conf.Key, logService)
 
-	go readStats(conf.PollInterval, mem, memStorage, logger)
+	go readStats(conf.PollInterval, memStorage, logger)
 	sendStats(conf.ReportInterval, conf.RateLimit, logger, memStorage, conf.Address)
 }
 
-func readStats(pollInterval time.Duration, mem *runtime.MemStats, store storage.Storage, logger zerolog.Logger) {
+func readStats(pollInterval time.Duration, store storage.Storage, logger zerolog.Logger) {
 	pollTicker := time.NewTicker(pollInterval)
 
 	for range pollTicker.C {
-		runtime.ReadMemStats(mem)
-		registerMetrics(mem, store, logger)
+		if err := registerMetrics(store, logger); err != nil {
+			logger.Error().Err(err).Msg("metrics registered")
+		}
 	}
 }
 
@@ -85,7 +87,10 @@ func sendStats(
 	}
 }
 
-func registerMetrics(memStats *runtime.MemStats, store storage.Storage, logger zerolog.Logger) {
+func registerMetrics(store storage.Storage, logger zerolog.Logger) error {
+	memStats := &runtime.MemStats{}
+	runtime.ReadMemStats(memStats)
+
 	registerMetric(store, logger, metric.NewGauge("Alloc", float64(memStats.Alloc)))
 	registerMetric(store, logger, metric.NewGauge("BuckHashSys", float64(memStats.BuckHashSys)))
 	registerMetric(store, logger, metric.NewGauge("Frees", float64(memStats.Frees)))
@@ -116,6 +121,25 @@ func registerMetrics(memStats *runtime.MemStats, store storage.Storage, logger z
 
 	registerMetric(store, logger, metric.NewCounter("PollCount", 1))
 	registerMetric(store, logger, metric.NewGauge("RandomValue", float64(rand.Int())))
+
+	gopsutilMemory, err := mem.VirtualMemory()
+	if err != nil {
+		return errors.Wrap(err, "failed to read virtual memory stats")
+	}
+
+	registerMetric(store, logger, metric.NewGauge("TotalMemory", float64(gopsutilMemory.Total)))
+	registerMetric(store, logger, metric.NewGauge("FreeMemory", float64(gopsutilMemory.Free)))
+
+	cpus, err := cpu.Percent(0, true)
+	if err != nil {
+		return errors.Wrap(err, "failed to read get the number of cores")
+	}
+
+	for idx, cpuUsage := range cpus {
+		registerMetric(store, logger, metric.NewGauge(fmt.Sprintf("CPUUtilization%d", idx), cpuUsage))
+	}
+
+	return nil
 }
 
 func registerMetric(store storage.Storage, logger zerolog.Logger, m *metric.Metric) {
