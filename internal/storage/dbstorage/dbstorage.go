@@ -21,7 +21,7 @@ type DBStorage struct {
 	logger  zerolog.Logger
 }
 
-func New(
+func NewDBStorage(
 	dsn string,
 	hashKey string,
 	logService *loggerservice.LoggerService,

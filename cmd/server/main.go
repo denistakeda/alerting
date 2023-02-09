@@ -90,10 +90,10 @@ func handleInterrupt() <-chan os.Signal {
 
 func getStorage(conf servercfg.Config, logService *loggerservice.LoggerService) (s.Storage, error) {
 	if conf.DatabaseDSN != "" {
-		return dbstorage.New(conf.DatabaseDSN, conf.Key, logService)
+		return dbstorage.NewDBStorage(conf.DatabaseDSN, conf.Key, logService)
 	} else if conf.StoreFile != "" {
-		return filestorage.New(context.Background(), conf.StoreFile, conf.StoreInterval, conf.Restore, conf.Key, logService)
+		return filestorage.NewFileStorage(context.Background(), conf.StoreFile, conf.StoreInterval, conf.Restore, conf.Key, logService)
 	} else {
-		return memstorage.New(conf.Key, logService), nil
+		return memstorage.NewMemStorage(conf.Key, logService), nil
 	}
 }

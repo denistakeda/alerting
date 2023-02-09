@@ -15,7 +15,7 @@ type Memstorage struct {
 	logger  zerolog.Logger
 }
 
-func New(hashKey string, logService *loggerservice.LoggerService) *Memstorage {
+func NewMemStorage(hashKey string, logService *loggerservice.LoggerService) *Memstorage {
 	return &Memstorage{
 		types:   make(map[metric.Type]map[string]*metric.Metric),
 		hashKey: hashKey,

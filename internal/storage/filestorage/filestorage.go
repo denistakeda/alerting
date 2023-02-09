@@ -22,7 +22,7 @@ type Filestorage struct {
 	logger zerolog.Logger
 }
 
-func New(
+func NewFileStorage(
 	ctx context.Context,
 	storeFile string,
 	storeInterval time.Duration,
@@ -31,7 +31,7 @@ func New(
 	logService *loggerservice.LoggerService,
 ) (*Filestorage, error) {
 	instance := &Filestorage{
-		mstorage:  memstorage.New(hashKey, logService),
+		mstorage:  memstorage.NewMemStorage(hashKey, logService),
 		storeFile: storeFile,
 		logger:    logService.ComponentLogger("Filestorage"),
 	}

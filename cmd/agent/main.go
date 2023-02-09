@@ -31,7 +31,7 @@ func main() {
 	logger.Info().Msgf("configuration: %v", conf)
 
 	mem := &runtime.MemStats{}
-	memStorage := memstorage.New(conf.Key, logService)
+	memStorage := memstorage.NewMemStorage(conf.Key, logService)
 
 	// Update metrics
 	pollTicker := time.NewTicker(conf.PollInterval)

@@ -106,7 +106,7 @@ func Test_memstorage_Update(t *testing.T) {
 }
 
 func create(t *testing.T, metrics []*metric.Metric) *Memstorage {
-	ms := New("", loggerservice.New())
+	ms := NewMemStorage("", loggerservice.New())
 	for _, m := range metrics {
 		_, err := ms.Update(context.Background(), m)
 		require.NoError(t, err)
