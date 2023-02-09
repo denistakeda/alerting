@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/denistakeda/alerting/internal/config/agentcfg"
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"log"
 	"math/rand"
@@ -33,25 +34,54 @@ func main() {
 	mem := &runtime.MemStats{}
 	memStorage := memstorage.NewMemStorage(conf.Key, logService)
 
-	// Update metrics
-	pollTicker := time.NewTicker(conf.PollInterval)
-	go func() {
-		for range pollTicker.C {
-			runtime.ReadMemStats(mem)
-			registerMetrics(mem, memStorage, logger)
-		}
-	}()
+	go readStats(conf.PollInterval, mem, memStorage, logger)
+	sendStats(conf.ReportInterval, conf.RateLimit, logger, memStorage, conf.Address)
+}
 
-	// Send metrics
+func readStats(pollInterval time.Duration, mem *runtime.MemStats, store storage.Storage, logger zerolog.Logger) {
+	pollTicker := time.NewTicker(pollInterval)
+
+	for range pollTicker.C {
+		runtime.ReadMemStats(mem)
+		registerMetrics(mem, store, logger)
+	}
+}
+
+func sendStats(
+	reportInterval time.Duration,
+	rateLimit int,
+	logger zerolog.Logger,
+	store storage.Storage,
+	address string,
+) {
+
 	client := &http.Client{
 		Transport: &http.Transport{
 			MaxIdleConns:    20,
 			MaxConnsPerHost: 20,
 		},
 	}
-	reportTicker := time.NewTicker(conf.ReportInterval)
+
+	bus := make(chan []*metric.Metric, 100)
+
+	// Initiate workers
+	for i := 0; i < rateLimit; i++ {
+		go func(workerId int) {
+			for metrics := range bus {
+				if err := sendMetrics(client, metrics, address); err != nil {
+					logger.Error().Err(err).Int("workerId", workerId).Msg("failed to send metrics")
+					continue
+				}
+
+				logger.Info().Int("workerId", workerId).Msgf("successfully sent %d metrics", len(metrics))
+			}
+		}(i)
+	}
+
+	// Task publisher
+	reportTicker := time.NewTicker(reportInterval)
 	for range reportTicker.C {
-		sendMetrics(client, logger, memStorage.All(context.Background()), conf.Address)
+		bus <- store.All(context.Background())
 	}
 }
 
@@ -95,24 +125,20 @@ func registerMetric(store storage.Storage, logger zerolog.Logger, m *metric.Metr
 	}
 }
 
-func sendMetrics(client *http.Client, logger zerolog.Logger, metrics []*metric.Metric, server string) {
-	startTime := time.Now()
-
+func sendMetrics(client *http.Client, metrics []*metric.Metric, server string) error {
 	url := fmt.Sprintf("%s/updates/", server)
 	m, err := json.Marshal(metrics)
 	if err != nil {
-		logger.Error().Err(err).Msg("failed to marshal metrics")
+		return errors.Wrap(err, "failed to marshal metrics")
 	}
 	body := bytes.NewBuffer(m)
 	resp, err := client.Post(url, "application/json", body)
 	if err != nil {
-		logger.Error().Err(err).Msgf("unable to file a request to URL: %s, error: %v, metric: %v\n", url, err, string(m))
-		return
+		return errors.Wrapf(err, "unable to file a request to URL: %s", url)
 	}
 	if err := resp.Body.Close(); err != nil {
-		logger.Error().Err(err).Msg("unable to close a body")
-		return
+		return errors.Wrap(err, "unable to close a body")
 	}
-	now := time.Now()
-	logger.Info().Msgf("successfully updated %d metrics in %f seconds", len(metrics), now.Sub(startTime).Seconds())
+
+	return nil
 }

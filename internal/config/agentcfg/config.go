@@ -14,6 +14,7 @@ type Config struct {
 	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
 	PollInterval   time.Duration `env:"POLL_INTERVAL"`
 	Key            string        `env:"KEY"`
+	RateLimit      int           `env:"RATE_LIMIT"`
 }
 
 func GetConfig() (Config, error) {
@@ -24,6 +25,7 @@ func GetConfig() (Config, error) {
 	flag.DurationVar(&config.ReportInterval, "r", 10*time.Second, "Interval to send metrics to server")
 	flag.DurationVar(&config.PollInterval, "p", 2*time.Second, "Interval to collect metrics")
 	flag.StringVar(&config.Key, "k", "", "Key to sign")
+	flag.IntVar(&config.RateLimit, "l", 1, "The maximum amount of active requests")
 	flag.Parse()
 
 	// Populate data from the env variables
