@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
 	"github.com/denistakeda/alerting/internal/config/server"
 	"github.com/denistakeda/alerting/internal/handler"
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	s "github.com/denistakeda/alerting/internal/storage"
+	"github.com/denistakeda/alerting/internal/storage/dbstorage"
 	"github.com/denistakeda/alerting/internal/storage/filestorage"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
 	"github.com/gin-contrib/gzip"
+	"github.com/gin-contrib/logger"
 	"github.com/gin-gonic/gin"
 	"log"
 	"os"
@@ -21,38 +25,44 @@ func main() {
 	}
 	log.Printf("configuration: %v", conf)
 
-	storage := getStorage(conf)
+	logService := loggerservice.New()
 
-	r := setupRouter(storage)
+	storage, err := getStorage(conf, logService)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	r := newRouter()
+	apiHandler := handler.New(storage, conf.Key, logService)
+	apiHandler.RegisterHandlers(r)
+
 	r.LoadHTMLGlob("internal/templates/*")
 	serverChan := runServer(r, conf.Address)
 	interruptChan := handleInterrupt()
 	select {
 	case serverError := <-serverChan:
-		if err := storage.Close(); err != nil {
-			log.Printf("Unable to properly stop the storage: %v\n", err)
-		}
 		log.Println(serverError)
 	case <-interruptChan:
-		if err := storage.Close(); err != nil {
-			log.Printf("Unable to properly stop the storage: %v\n", err)
-		}
 		log.Println("Program was interrupted")
+	}
+
+	stopServer(storage)
+}
+
+func stopServer(storage s.Storage) {
+	if err := storage.Close(context.Background()); err != nil {
+		log.Printf("Unable to properly stop the storage: %v\n", err)
 	}
 }
 
-func setupRouter(storage s.Storage) *gin.Engine {
-	r := gin.Default()
+func newRouter() *gin.Engine {
+	r := gin.New()
+
 	r.RedirectTrailingSlash = false
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
+	r.Use(gin.Recovery())
+	r.Use(logger.SetLogger())
 
-	h := handler.New(storage)
-
-	r.POST("/update/", h.UpdateMetricHandler2)
-	r.POST("/update/:metric_type/:metric_name/:metric_value", h.UpdateMetricHandler)
-	r.POST("/value/", h.GetMetricHandler2)
-	r.GET("/value/:metric_type/:metric_name", h.GetMetricHandler)
-	r.GET("/", h.MainPageHandler)
 	return r
 }
 
@@ -72,14 +82,12 @@ func handleInterrupt() <-chan os.Signal {
 	return out
 }
 
-func getStorage(conf servercfg.Config) s.Storage {
-	if conf.StoreFile == "" {
-		return memstorage.New()
+func getStorage(conf servercfg.Config, logService *loggerservice.LoggerService) (s.Storage, error) {
+	if conf.DatabaseDSN != "" {
+		return dbstorage.NewDBStorage(conf.DatabaseDSN, conf.Key, logService)
+	} else if conf.StoreFile != "" {
+		return filestorage.NewFileStorage(context.Background(), conf.StoreFile, conf.StoreInterval, conf.Restore, conf.Key, logService)
 	} else {
-		storage, err := filestorage.New(conf.StoreFile, conf.StoreInterval, conf.Restore)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return storage
+		return memstorage.NewMemStorage(conf.Key, logService), nil
 	}
 }

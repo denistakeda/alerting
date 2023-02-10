@@ -1,22 +1,29 @@
 package memstorage
 
 import (
+	"context"
 	"github.com/denistakeda/alerting/internal/metric"
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
+	"github.com/rs/zerolog"
 	"sync"
 )
 
 type Memstorage struct {
-	types map[metric.Type]map[string]*metric.Metric
-	mx    sync.Mutex
+	types   map[metric.Type]map[string]*metric.Metric
+	hashKey string
+	mx      sync.Mutex
+	logger  zerolog.Logger
 }
 
-func New() *Memstorage {
+func NewMemStorage(hashKey string, logService *loggerservice.LoggerService) *Memstorage {
 	return &Memstorage{
-		types: make(map[metric.Type]map[string]*metric.Metric),
+		types:   make(map[metric.Type]map[string]*metric.Metric),
+		hashKey: hashKey,
+		logger:  logService.ComponentLogger("Memstorage"),
 	}
 }
 
-func (m *Memstorage) Get(metricType metric.Type, metricName string) (*metric.Metric, bool) {
+func (m *Memstorage) Get(_ context.Context, metricType metric.Type, metricName string) (*metric.Metric, bool) {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 
@@ -29,7 +36,7 @@ func (m *Memstorage) Get(metricType metric.Type, metricName string) (*metric.Met
 	return met, ok
 }
 
-func (m *Memstorage) Update(updatedMetric *metric.Metric) (*metric.Metric, error) {
+func (m *Memstorage) Update(_ context.Context, updatedMetric *metric.Metric) (*metric.Metric, error) {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 
@@ -41,10 +48,19 @@ func (m *Memstorage) Update(updatedMetric *metric.Metric) (*metric.Metric, error
 
 	res := metric.Update(group[updatedMetric.Name()], updatedMetric)
 	group[updatedMetric.Name()] = res
+	res.FillHash(m.hashKey)
 	return res, nil
 }
 
-func (m *Memstorage) Replace(met *metric.Metric) {
+func (m *Memstorage) UpdateAll(ctx context.Context, metrics []*metric.Metric) error {
+	for _, met := range metrics {
+		_, _ = m.Update(ctx, met)
+	}
+
+	return nil
+}
+
+func (m *Memstorage) Replace(_ context.Context, met *metric.Metric) {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 
@@ -54,9 +70,10 @@ func (m *Memstorage) Replace(met *metric.Metric) {
 		m.types[met.Type()] = group
 	}
 	group[met.Name()] = met
+	met.FillHash(m.hashKey)
 }
 
-func (m *Memstorage) All() []*metric.Metric {
+func (m *Memstorage) All(_ context.Context) []*metric.Metric {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 
@@ -69,7 +86,12 @@ func (m *Memstorage) All() []*metric.Metric {
 	return res
 }
 
-func (m *Memstorage) Close() error {
+func (m *Memstorage) Close(_ context.Context) error {
 	// For memory storage there is no need to do anything on close
+	return nil
+}
+
+func (m *Memstorage) Ping(_ context.Context) error {
+	// For memory storage there is no need to do anything on ping
 	return nil
 }

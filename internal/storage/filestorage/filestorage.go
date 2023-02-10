@@ -1,12 +1,14 @@
 package filestorage
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/denistakeda/alerting/internal/metric"
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"io"
-	"log"
 	"os"
 	"time"
 )
@@ -16,16 +18,26 @@ type Filestorage struct {
 
 	storeFile   string
 	storeTicker *time.Ticker
+
+	logger zerolog.Logger
 }
 
-func New(storeFile string, storeInterval time.Duration, restore bool) (*Filestorage, error) {
+func NewFileStorage(
+	ctx context.Context,
+	storeFile string,
+	storeInterval time.Duration,
+	restore bool,
+	hashKey string,
+	logService *loggerservice.LoggerService,
+) (*Filestorage, error) {
 	instance := &Filestorage{
-		mstorage:  memstorage.New(),
+		mstorage:  memstorage.NewMemStorage(hashKey, logService),
 		storeFile: storeFile,
+		logger:    logService.ComponentLogger("Filestorage"),
 	}
 
 	if restore {
-		if err := instance.restore(); err != nil {
+		if err := instance.restore(ctx); err != nil {
 			return nil, errors.Wrap(err, "unable to initiate a Filestorage")
 		}
 	}
@@ -34,7 +46,7 @@ func New(storeFile string, storeInterval time.Duration, restore bool) (*Filestor
 		instance.storeTicker = time.NewTicker(storeInterval)
 		go func() {
 			for range instance.storeTicker.C {
-				instance.dump()
+				instance.dump(ctx)
 			}
 		}()
 	}
@@ -42,56 +54,76 @@ func New(storeFile string, storeInterval time.Duration, restore bool) (*Filestor
 	return instance, nil
 }
 
-func (fs *Filestorage) Get(metricType metric.Type, metricName string) (*metric.Metric, bool) {
-	return fs.mstorage.Get(metricType, metricName)
+func (fs *Filestorage) Get(ctx context.Context, metricType metric.Type, metricName string) (*metric.Metric, bool) {
+	return fs.mstorage.Get(ctx, metricType, metricName)
 }
 
-func (fs *Filestorage) Update(updatedMetric *metric.Metric) (*metric.Metric, error) {
-	res, err := fs.mstorage.Update(updatedMetric)
+func (fs *Filestorage) Update(ctx context.Context, updatedMetric *metric.Metric) (*metric.Metric, error) {
+	res, err := fs.mstorage.Update(ctx, updatedMetric)
 	if fs.storeTicker == nil {
-		fs.dump()
+		fs.dump(ctx)
 	}
 	return res, err
 }
 
-func (fs *Filestorage) All() []*metric.Metric {
-	return fs.mstorage.All()
+func (fs *Filestorage) UpdateAll(ctx context.Context, metrics []*metric.Metric) error {
+	for _, met := range metrics {
+		_, err := fs.Update(ctx, met)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func (fs *Filestorage) Close() error {
+func (fs *Filestorage) All(ctx context.Context) []*metric.Metric {
+	return fs.mstorage.All(ctx)
+}
+
+func (fs *Filestorage) Close(ctx context.Context) error {
 	fs.storeTicker.Stop()
-	fs.dump()
-	return fs.mstorage.Close()
+	fs.dump(ctx)
+	return fs.mstorage.Close(ctx)
 }
 
-func (fs *Filestorage) dump() {
+func (fs *Filestorage) Ping(_ context.Context) error {
+	// For file storage there is no need to do anything on ping
+	return nil
+}
+
+func (fs *Filestorage) dump(ctx context.Context) {
 	logPrefix := "Filestorage: failed to dump data"
-	ms := fs.All()
+	ms := fs.All(ctx)
 	if len(ms) == 0 {
 		return
 	}
 
 	file, err := os.OpenFile(fs.storeFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
-		log.Printf("%s: failed to open the file \"%s\"", logPrefix, fs.storeFile)
+		fs.logger.Error().Err(err).
+			Msgf("%s: failed to open the file \"%s\"", logPrefix, fs.storeFile)
+
 		return
 	}
 	defer func() {
 		err := file.Close()
 		if err != nil {
-			log.Printf("failed to close file \"%s\"", fs.storeFile)
+			fs.logger.Error().Err(err).
+				Msgf("failed to close file \"%s\"", fs.storeFile)
 		}
 	}()
 	encoder := json.NewEncoder(file)
 
 	for _, met := range ms {
 		if err := encoder.Encode(met); err != nil {
-			log.Printf("%s: failed to write metric %v to file %s: %v", logPrefix, met, fs.storeFile, err)
+			fs.logger.Error().Err(err).
+				Msgf("%s: failed to write metric %v to file %s: %v", logPrefix, met, fs.storeFile, err)
 		}
 	}
 }
 
-func (fs *Filestorage) restore() error {
+func (fs *Filestorage) restore(ctx context.Context) error {
 	file, err := os.OpenFile(fs.storeFile, os.O_RDONLY|os.O_CREATE, 0777)
 	if err != nil {
 		return errors.Wrapf(err, "Failestorage: failed to restore data from file %s", fs.storeFile)
@@ -99,7 +131,8 @@ func (fs *Filestorage) restore() error {
 	defer func() {
 		err := file.Close()
 		if err != nil {
-			log.Printf("failed to close file \"%s\"", fs.storeFile)
+			fs.logger.Error().Err(err).
+				Msgf("failed to close file \"%s\"", fs.storeFile)
 		}
 	}()
 	decoder := json.NewDecoder(file)
@@ -112,6 +145,6 @@ func (fs *Filestorage) restore() error {
 		if err != nil {
 			return errors.Wrapf(err, "Failestorage: failed to restore data from file %s", fs.storeFile)
 		}
-		fs.mstorage.Replace(&m)
+		fs.mstorage.Replace(ctx, &m)
 	}
 }

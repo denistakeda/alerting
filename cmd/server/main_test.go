@@ -4,79 +4,80 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/denistakeda/alerting/internal/handler"
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
+	"github.com/denistakeda/alerting/mocks"
+	"github.com/golang/mock/gomock"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/denistakeda/alerting/internal/metric"
-	s "github.com/denistakeda/alerting/internal/storage"
-	"github.com/denistakeda/alerting/internal/storage/memstorage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-type mockStorage struct{}
-
-func (m *mockStorage) Get(_metricType metric.Type, _metricName string) (*metric.Metric, bool) {
-	return nil, false
-}
-func (m *mockStorage) Update(_metric *metric.Metric) (*metric.Metric, error) { return nil, nil }
-func (m *mockStorage) All() []*metric.Metric                                 { return []*metric.Metric{} }
-func (m *mockStorage) Close() error                                          { return nil }
 
 func Test_updateMetric(t *testing.T) {
 	tests := []struct {
 		name     string
 		request  string
-		storage  s.Storage
+		met      *metric.Metric
 		wantCode int
 	}{
 		{
 			name:     "gauge success case",
 			request:  "/update/gauge/metric_name/100",
-			storage:  &mockStorage{},
+			met:      metric.NewGauge("metric_name", 100),
 			wantCode: http.StatusOK,
 		},
 		{
 			name:     "counter success case",
 			request:  "/update/counter/metric_name/100",
-			storage:  &mockStorage{},
+			met:      metric.NewCounter("metric_name", 100),
 			wantCode: http.StatusOK,
 		},
 		{
 			name:     "gauge without name and type",
 			request:  "/update/gauge/",
-			storage:  &mockStorage{},
+			met:      nil,
 			wantCode: http.StatusNotFound,
 		},
 		{
 			name:     "counter without name and type",
 			request:  "/update/counter/",
-			storage:  &mockStorage{},
+			met:      nil,
 			wantCode: http.StatusNotFound,
 		},
 		{
 			name:     "gauge invalid value",
 			request:  "/update/gauge/test_counter/none",
-			storage:  &mockStorage{},
+			met:      nil,
 			wantCode: http.StatusBadRequest,
 		},
 		{
 			name:     "counter invalid value",
 			request:  "/update/counter/test_counter/none",
-			storage:  &mockStorage{},
+			met:      nil,
 			wantCode: http.StatusBadRequest,
 		},
 		{
 			name:     "unknown type",
 			request:  "/update/unknown/testCounter/100",
-			storage:  &mockStorage{},
+			met:      nil,
 			wantCode: http.StatusNotImplemented,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			router := setupRouter(tt.storage)
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			s := mocks.NewMockStorage(ctrl)
+			s.EXPECT().Update(gomock.Any(), tt.met).Return(tt.met, nil).AnyTimes()
+
+			apiHandler := handler.New(s, "", loggerservice.New())
+			router := newRouter()
+			apiHandler.RegisterHandlers(router)
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("POST", tt.request, nil)
@@ -95,16 +96,27 @@ func Test_getMetric(t *testing.T) {
 		code int
 		body string
 	}
+	type storageMock struct {
+		reqType   metric.Type
+		reqName   string
+		retMetric *metric.Metric
+		retOk     bool
+	}
 	tests := []struct {
-		name    string
-		request string
-		storage s.Storage
-		want    want
+		name        string
+		request     string
+		storageMock storageMock
+		want        want
 	}{
 		{
 			name:    "gauge success case",
 			request: fmt.Sprintf("/value/%s/%s", m1.StrType(), m1.Name()),
-			storage: createStorage(t, []*metric.Metric{m1, m2, m3}),
+			storageMock: storageMock{
+				reqType:   m1.Type(),
+				reqName:   m1.Name(),
+				retMetric: m1,
+				retOk:     true,
+			},
 			want: want{
 				code: http.StatusOK,
 				body: m1.StrValue(),
@@ -113,7 +125,12 @@ func Test_getMetric(t *testing.T) {
 		{
 			name:    "counter success case",
 			request: fmt.Sprintf("/value/%s/%s", m3.StrType(), m3.Name()),
-			storage: createStorage(t, []*metric.Metric{m1, m2, m3}),
+			storageMock: storageMock{
+				reqType:   m3.Type(),
+				reqName:   m3.Name(),
+				retMetric: m3,
+				retOk:     true,
+			},
 			want: want{
 				code: http.StatusOK,
 				body: m3.StrValue(),
@@ -122,7 +139,12 @@ func Test_getMetric(t *testing.T) {
 		{
 			name:    "request not existing metric",
 			request: fmt.Sprintf("/value/%s/%s", m2.StrType(), m2.Name()),
-			storage: createStorage(t, []*metric.Metric{m1, m3}),
+			storageMock: storageMock{
+				reqType:   m2.Type(),
+				reqName:   m2.Name(),
+				retMetric: nil,
+				retOk:     false,
+			},
 			want: want{
 				code: http.StatusNotFound,
 				body: "",
@@ -131,7 +153,18 @@ func Test_getMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			router := setupRouter(tt.storage)
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			s := mocks.NewMockStorage(ctrl)
+			s.EXPECT().
+				Get(gomock.Any(), tt.storageMock.reqType, tt.storageMock.reqName).
+				Return(tt.storageMock.retMetric, tt.storageMock.retOk).
+				AnyTimes()
+
+			apiHandler := handler.New(s, "", loggerservice.New())
+			router := newRouter()
+			apiHandler.RegisterHandlers(router)
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", tt.request, nil)
@@ -146,23 +179,33 @@ func Test_getMetric(t *testing.T) {
 func Test_update(t *testing.T) {
 
 	g1 := metric.NewGauge("gauge1", 3.14)
-	//g2 := metric.NewGauge("gauge2", 5.18)
+	g2 := metric.NewGauge("gauge2", 5.18)
 	c3 := metric.NewCounter("counter1", 7)
+	c4 := metric.NewCounter(c3.Name(), 14)
 
 	type want struct {
 		code int
 		body []byte
 	}
+	type storageMock struct {
+		reqMetric *metric.Metric
+		resMetric *metric.Metric
+		resError  error
+	}
 	tests := []struct {
 		name        string
 		requestBody []byte
-		storage     s.Storage
+		storageMock storageMock
 		want        want
 	}{
 		{
 			name:        "not existing gauge",
 			requestBody: marshal(t, g1),
-			storage:     createStorage(t, make([]*metric.Metric, 0)),
+			storageMock: storageMock{
+				reqMetric: g1,
+				resMetric: g1,
+				resError:  nil,
+			},
 			want: want{
 				code: http.StatusOK,
 				body: marshal(t, g1),
@@ -170,17 +213,25 @@ func Test_update(t *testing.T) {
 		},
 		{
 			name:        "existing gauge",
-			requestBody: marshal(t, metric.NewGauge(g1.Name(), 5.18)),
-			storage:     createStorage(t, []*metric.Metric{g1}),
+			requestBody: marshal(t, metric.NewGauge(g2.Name(), 5.18)),
+			storageMock: storageMock{
+				reqMetric: g2,
+				resMetric: g2,
+				resError:  nil,
+			},
 			want: want{
 				code: http.StatusOK,
-				body: marshal(t, metric.NewGauge(g1.Name(), 5.18)),
+				body: marshal(t, g2),
 			},
 		},
 		{
 			name:        "not existing counter",
 			requestBody: marshal(t, c3),
-			storage:     createStorage(t, make([]*metric.Metric, 0)),
+			storageMock: storageMock{
+				reqMetric: c3,
+				resMetric: c3,
+				resError:  nil,
+			},
 			want: want{
 				code: http.StatusOK,
 				body: marshal(t, c3),
@@ -189,7 +240,11 @@ func Test_update(t *testing.T) {
 		{
 			name:        "existing counter",
 			requestBody: marshal(t, c3),
-			storage:     createStorage(t, []*metric.Metric{c3}),
+			storageMock: storageMock{
+				reqMetric: c3,
+				resMetric: c4,
+				resError:  nil,
+			},
 			want: want{
 				code: http.StatusOK,
 				body: marshal(t, metric.NewCounter(c3.Name(), 14)),
@@ -199,7 +254,19 @@ func Test_update(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			router := setupRouter(tt.storage)
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			s := mocks.NewMockStorage(ctrl)
+			s.EXPECT().
+				Update(gomock.Any(), tt.storageMock.reqMetric).
+				Return(tt.storageMock.resMetric, tt.storageMock.resError).
+				AnyTimes()
+
+			apiHandler := handler.New(s, "", loggerservice.New())
+			router := newRouter()
+			apiHandler.RegisterHandlers(router)
+
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("POST", "/update/", bytes.NewBuffer(tt.requestBody))
 			req.Header.Set("Content-Type", "application/json")
@@ -215,13 +282,4 @@ func marshal(t *testing.T, v any) []byte {
 	res, err := json.Marshal(v)
 	require.NoError(t, err)
 	return res
-}
-
-func createStorage(t *testing.T, metrics []*metric.Metric) s.Storage {
-	ms := memstorage.New()
-	for _, m := range metrics {
-		_, err := ms.Update(m)
-		require.NoError(t, err)
-	}
-	return ms
 }
