@@ -43,9 +43,17 @@ func readStats(pollInterval time.Duration, store storage.Storage, logger zerolog
 	pollTicker := time.NewTicker(pollInterval)
 
 	for range pollTicker.C {
-		if err := registerMetrics(store, logger); err != nil {
-			logger.Error().Err(err).Msg("metrics registered")
-		}
+		go func() {
+			if err := registerRuntimeMetrics(store, logger); err != nil {
+				logger.Error().Err(err).Msg("failed to register runtime metrics")
+			}
+		}()
+
+		go func() {
+			if err := registerGoOpsMetrics(store, logger); err != nil {
+				logger.Error().Err(err).Msg("failed to register goops metrics")
+			}
+		}()
 	}
 }
 
@@ -56,7 +64,6 @@ func sendStats(
 	store storage.Storage,
 	address string,
 ) {
-
 	client := &http.Client{
 		Transport: &http.Transport{
 			MaxIdleConns:    20,
@@ -87,7 +94,7 @@ func sendStats(
 	}
 }
 
-func registerMetrics(store storage.Storage, logger zerolog.Logger) error {
+func registerRuntimeMetrics(store storage.Storage, logger zerolog.Logger) error {
 	memStats := &runtime.MemStats{}
 	runtime.ReadMemStats(memStats)
 
@@ -122,6 +129,10 @@ func registerMetrics(store storage.Storage, logger zerolog.Logger) error {
 	registerMetric(store, logger, metric.NewCounter("PollCount", 1))
 	registerMetric(store, logger, metric.NewGauge("RandomValue", float64(rand.Int())))
 
+	return nil
+}
+
+func registerGoOpsMetrics(store storage.Storage, logger zerolog.Logger) error {
 	gopsutilMemory, err := mem.VirtualMemory()
 	if err != nil {
 		return errors.Wrap(err, "failed to read virtual memory stats")
