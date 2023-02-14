@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/denistakeda/alerting/internal/config/agentcfg"
+	"github.com/denistakeda/alerting/internal/httpclient"
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -64,33 +65,17 @@ func sendStats(
 	store storage.Storage,
 	address string,
 ) {
-	client := &http.Client{
-		Transport: &http.Transport{
-			MaxIdleConns:    20,
-			MaxConnsPerHost: 20,
-		},
-	}
-
-	bus := make(chan []*metric.Metric, 100)
-
-	// Initiate workers
-	for i := 0; i < rateLimit; i++ {
-		go func(workerId int) {
-			for metrics := range bus {
-				if err := sendMetrics(client, metrics, address); err != nil {
-					logger.Error().Err(err).Int("workerId", workerId).Msg("failed to send metrics")
-					continue
-				}
-
-				logger.Info().Int("workerId", workerId).Msgf("successfully sent %d metrics", len(metrics))
-			}
-		}(i)
-	}
+	client := httpclient.New(rateLimit)
 
 	// Task publisher
 	reportTicker := time.NewTicker(reportInterval)
 	for range reportTicker.C {
-		bus <- store.All(context.Background())
+		metrics := store.All(context.Background())
+		if err := sendMetrics(client, metrics, address); err != nil {
+			logger.Error().Err(err).Msg("failed to send metrics")
+			continue
+		}
+		logger.Info().Msgf("successfully sent %d metrics", len(metrics))
 	}
 }
 
@@ -160,14 +145,22 @@ func registerMetric(store storage.Storage, logger zerolog.Logger, m *metric.Metr
 	}
 }
 
-func sendMetrics(client *http.Client, metrics []*metric.Metric, server string) error {
+func sendMetrics(client *httpclient.HTTPClient, metrics []*metric.Metric, server string) error {
 	url := fmt.Sprintf("%s/updates/", server)
 	m, err := json.Marshal(metrics)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal metrics")
 	}
 	body := bytes.NewBuffer(m)
-	resp, err := client.Post(url, "application/json", body)
+
+	req, err := http.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		return errors.Wrap(err, "failed to create a request")
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return errors.Wrapf(err, "unable to file a request to URL: %s", url)
 	}
