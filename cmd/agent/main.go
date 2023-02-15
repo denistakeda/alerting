@@ -6,8 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/denistakeda/alerting/internal/config/agentcfg"
+	"github.com/denistakeda/alerting/internal/httpclient"
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/shirou/gopsutil/v3/cpu"
 	"log"
 	"math/rand"
 	"net/http"
@@ -17,6 +20,7 @@ import (
 	"github.com/denistakeda/alerting/internal/metric"
 	"github.com/denistakeda/alerting/internal/storage"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 func main() {
@@ -30,32 +34,55 @@ func main() {
 
 	logger.Info().Msgf("configuration: %v", conf)
 
-	mem := &runtime.MemStats{}
 	memStorage := memstorage.NewMemStorage(conf.Key, logService)
 
-	// Update metrics
-	pollTicker := time.NewTicker(conf.PollInterval)
-	go func() {
-		for range pollTicker.C {
-			runtime.ReadMemStats(mem)
-			registerMetrics(mem, memStorage, logger)
-		}
-	}()
+	go readStats(conf.PollInterval, memStorage, logger)
+	sendStats(conf.ReportInterval, conf.RateLimit, logger, memStorage, conf.Address)
+}
 
-	// Send metrics
-	client := &http.Client{
-		Transport: &http.Transport{
-			MaxIdleConns:    20,
-			MaxConnsPerHost: 20,
-		},
-	}
-	reportTicker := time.NewTicker(conf.ReportInterval)
-	for range reportTicker.C {
-		sendMetrics(client, logger, memStorage.All(context.Background()), conf.Address)
+func readStats(pollInterval time.Duration, store storage.Storage, logger zerolog.Logger) {
+	pollTicker := time.NewTicker(pollInterval)
+
+	for range pollTicker.C {
+		go func() {
+			if err := registerRuntimeMetrics(store, logger); err != nil {
+				logger.Error().Err(err).Msg("failed to register runtime metrics")
+			}
+		}()
+
+		go func() {
+			if err := registerGoOpsMetrics(store, logger); err != nil {
+				logger.Error().Err(err).Msg("failed to register goops metrics")
+			}
+		}()
 	}
 }
 
-func registerMetrics(memStats *runtime.MemStats, store storage.Storage, logger zerolog.Logger) {
+func sendStats(
+	reportInterval time.Duration,
+	rateLimit int,
+	logger zerolog.Logger,
+	store storage.Storage,
+	address string,
+) {
+	client := httpclient.New(rateLimit)
+
+	// Task publisher
+	reportTicker := time.NewTicker(reportInterval)
+	for range reportTicker.C {
+		metrics := store.All(context.Background())
+		if err := sendMetrics(client, metrics, address); err != nil {
+			logger.Error().Err(err).Msg("failed to send metrics")
+			continue
+		}
+		logger.Info().Msgf("successfully sent %d metrics", len(metrics))
+	}
+}
+
+func registerRuntimeMetrics(store storage.Storage, logger zerolog.Logger) error {
+	memStats := &runtime.MemStats{}
+	runtime.ReadMemStats(memStats)
+
 	registerMetric(store, logger, metric.NewGauge("Alloc", float64(memStats.Alloc)))
 	registerMetric(store, logger, metric.NewGauge("BuckHashSys", float64(memStats.BuckHashSys)))
 	registerMetric(store, logger, metric.NewGauge("Frees", float64(memStats.Frees)))
@@ -86,6 +113,29 @@ func registerMetrics(memStats *runtime.MemStats, store storage.Storage, logger z
 
 	registerMetric(store, logger, metric.NewCounter("PollCount", 1))
 	registerMetric(store, logger, metric.NewGauge("RandomValue", float64(rand.Int())))
+
+	return nil
+}
+
+func registerGoOpsMetrics(store storage.Storage, logger zerolog.Logger) error {
+	gopsutilMemory, err := mem.VirtualMemory()
+	if err != nil {
+		return errors.Wrap(err, "failed to read virtual memory stats")
+	}
+
+	registerMetric(store, logger, metric.NewGauge("TotalMemory", float64(gopsutilMemory.Total)))
+	registerMetric(store, logger, metric.NewGauge("FreeMemory", float64(gopsutilMemory.Free)))
+
+	cpus, err := cpu.Percent(0, true)
+	if err != nil {
+		return errors.Wrap(err, "failed to read get the number of cores")
+	}
+
+	for idx, cpuUsage := range cpus {
+		registerMetric(store, logger, metric.NewGauge(fmt.Sprintf("CPUutilization%d", idx), cpuUsage))
+	}
+
+	return nil
 }
 
 func registerMetric(store storage.Storage, logger zerolog.Logger, m *metric.Metric) {
@@ -95,24 +145,28 @@ func registerMetric(store storage.Storage, logger zerolog.Logger, m *metric.Metr
 	}
 }
 
-func sendMetrics(client *http.Client, logger zerolog.Logger, metrics []*metric.Metric, server string) {
-	startTime := time.Now()
-
+func sendMetrics(client *httpclient.HTTPClient, metrics []*metric.Metric, server string) error {
 	url := fmt.Sprintf("%s/updates/", server)
 	m, err := json.Marshal(metrics)
 	if err != nil {
-		logger.Error().Err(err).Msg("failed to marshal metrics")
+		return errors.Wrap(err, "failed to marshal metrics")
 	}
 	body := bytes.NewBuffer(m)
-	resp, err := client.Post(url, "application/json", body)
+
+	req, err := http.NewRequest(http.MethodPost, url, body)
 	if err != nil {
-		logger.Error().Err(err).Msgf("unable to file a request to URL: %s, error: %v, metric: %v\n", url, err, string(m))
-		return
+		return errors.Wrap(err, "failed to create a request")
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return errors.Wrapf(err, "unable to file a request to URL: %s", url)
 	}
 	if err := resp.Body.Close(); err != nil {
-		logger.Error().Err(err).Msg("unable to close a body")
-		return
+		return errors.Wrap(err, "unable to close a body")
 	}
-	now := time.Now()
-	logger.Info().Msgf("successfully updated %d metrics in %f seconds", len(metrics), now.Sub(startTime).Seconds())
+
+	return nil
 }
