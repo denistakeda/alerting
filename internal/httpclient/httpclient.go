@@ -17,7 +17,7 @@ func New(rateLimit int) *HTTPClient {
 	client := &http.Client{}
 
 	for i := 0; i < rateLimit; i++ {
-		go sendRequest(bus, client)
+		go handleRequests(bus, client)
 	}
 
 	return &HTTPClient{
@@ -43,7 +43,7 @@ func (c *HTTPClient) Do(req *http.Request) (*http.Response, error) {
 	}
 }
 
-func sendRequest(bus <-chan *task, client *http.Client) {
+func handleRequests(bus <-chan *task, client *http.Client) {
 	for t := range bus {
 		resp, err := client.Do(t.request)
 		if err != nil {
