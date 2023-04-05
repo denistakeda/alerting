@@ -1,10 +1,11 @@
 package handler
 
 import (
-	"github.com/denistakeda/alerting/internal/services/loggerservice"
-	s "github.com/denistakeda/alerting/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
+
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
+	s "github.com/denistakeda/alerting/internal/storage"
 )
 
 type Handler struct {

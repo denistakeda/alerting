@@ -2,9 +2,10 @@ package servercfg
 
 import (
 	"flag"
+	"time"
+
 	"github.com/caarlos0/env/v6"
 	"github.com/pkg/errors"
-	"time"
 )
 
 type Config struct {

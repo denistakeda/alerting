@@ -2,10 +2,12 @@ package memstorage
 
 import (
 	"context"
+	"sync"
+
+	"github.com/rs/zerolog"
+
 	"github.com/denistakeda/alerting/internal/metric"
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
-	"github.com/rs/zerolog"
-	"sync"
 )
 
 type Memstorage struct {

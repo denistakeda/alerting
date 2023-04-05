@@ -3,8 +3,9 @@ package handler
 import (
 	"net/http"
 
-	"github.com/denistakeda/alerting/internal/metric"
 	"github.com/gin-gonic/gin"
+
+	"github.com/denistakeda/alerting/internal/metric"
 )
 
 type met struct {

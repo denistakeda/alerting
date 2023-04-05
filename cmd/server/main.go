@@ -2,20 +2,22 @@ package main
 
 import (
 	"context"
-	"github.com/denistakeda/alerting/internal/config/server"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/gin-contrib/gzip"
+	"github.com/gin-contrib/logger"
+	"github.com/gin-gonic/gin"
+
+	servercfg "github.com/denistakeda/alerting/internal/config/server"
 	"github.com/denistakeda/alerting/internal/handler"
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	s "github.com/denistakeda/alerting/internal/storage"
 	"github.com/denistakeda/alerting/internal/storage/dbstorage"
 	"github.com/denistakeda/alerting/internal/storage/filestorage"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
-	"github.com/gin-contrib/gzip"
-	"github.com/gin-contrib/logger"
-	"github.com/gin-gonic/gin"
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 func main() {

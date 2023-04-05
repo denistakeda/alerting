@@ -4,17 +4,20 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/denistakeda/alerting/internal/handler"
-	"github.com/denistakeda/alerting/internal/services/loggerservice"
-	"github.com/denistakeda/alerting/mocks"
-	"github.com/golang/mock/gomock"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/denistakeda/alerting/internal/metric"
+	"github.com/golang/mock/gomock"
+
+	"github.com/denistakeda/alerting/internal/handler"
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
+	"github.com/denistakeda/alerting/mocks"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/denistakeda/alerting/internal/metric"
 )
 
 func Test_updateMetric(t *testing.T) {

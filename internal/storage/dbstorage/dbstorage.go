@@ -3,8 +3,8 @@ package dbstorage
 import (
 	"context"
 	"database/sql"
-	"github.com/denistakeda/alerting/internal/metric"
-	"github.com/denistakeda/alerting/internal/services/loggerservice"
+	"time"
+
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -12,7 +12,9 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"time"
+
+	"github.com/denistakeda/alerting/internal/metric"
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
 )
 
 type DBStorage struct {

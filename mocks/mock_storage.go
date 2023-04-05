@@ -8,8 +8,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	metric "github.com/denistakeda/alerting/internal/metric"
 	gomock "github.com/golang/mock/gomock"
+
+	metric "github.com/denistakeda/alerting/internal/metric"
 )
 
 // MockStorage is a mock of Storage interface.

@@ -5,22 +5,25 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/denistakeda/alerting/internal/config/agentcfg"
-	"github.com/denistakeda/alerting/internal/httpclient"
-	"github.com/denistakeda/alerting/internal/services/loggerservice"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
-	"github.com/shirou/gopsutil/v3/cpu"
 	"log"
 	"math/rand"
 	"net/http"
 	"runtime"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+	"github.com/shirou/gopsutil/v3/cpu"
+
+	"github.com/denistakeda/alerting/internal/config/agentcfg"
+	"github.com/denistakeda/alerting/internal/httpclient"
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
+
+	"github.com/shirou/gopsutil/v3/mem"
+
 	"github.com/denistakeda/alerting/internal/metric"
 	"github.com/denistakeda/alerting/internal/storage"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
-	"github.com/shirou/gopsutil/v3/mem"
 )
 
 func main() {

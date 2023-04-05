@@ -7,8 +7,9 @@ import (
 
 	errextra "github.com/pkg/errors"
 
-	"github.com/denistakeda/alerting/internal/metric"
 	"github.com/gin-gonic/gin"
+
+	"github.com/denistakeda/alerting/internal/metric"
 )
 
 var (

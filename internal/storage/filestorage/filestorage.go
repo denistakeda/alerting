@@ -3,14 +3,16 @@ package filestorage
 import (
 	"context"
 	"encoding/json"
-	"github.com/denistakeda/alerting/internal/metric"
-	"github.com/denistakeda/alerting/internal/services/loggerservice"
-	"github.com/denistakeda/alerting/internal/storage/memstorage"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
 	"io"
 	"os"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+
+	"github.com/denistakeda/alerting/internal/metric"
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
+	"github.com/denistakeda/alerting/internal/storage/memstorage"
 )
 
 type Filestorage struct {

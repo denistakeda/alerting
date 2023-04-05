@@ -3,10 +3,11 @@ package agentcfg
 import (
 	"flag"
 	"fmt"
-	"github.com/caarlos0/env/v6"
-	"github.com/pkg/errors"
 	"strings"
 	"time"
+
+	"github.com/caarlos0/env/v6"
+	"github.com/pkg/errors"
 )
 
 type Config struct {
