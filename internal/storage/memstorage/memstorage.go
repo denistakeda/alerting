@@ -4,12 +4,16 @@ import (
 	"context"
 	"sync"
 
+	"github.com/denistakeda/alerting/internal/storage"
 	"github.com/rs/zerolog"
 
 	"github.com/denistakeda/alerting/internal/metric"
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
 )
 
+var _ storage.Storage = (*Memstorage)(nil)
+
+// Memstorage is a memory storage.
 type Memstorage struct {
 	types   map[metric.Type]map[string]*metric.Metric
 	hashKey string
@@ -17,6 +21,7 @@ type Memstorage struct {
 	logger  zerolog.Logger
 }
 
+// NewMemStorage instantiates a new MemStorage instance.
 func NewMemStorage(hashKey string, logService *loggerservice.LoggerService) *Memstorage {
 	return &Memstorage{
 		types:   make(map[metric.Type]map[string]*metric.Metric),
@@ -25,6 +30,7 @@ func NewMemStorage(hashKey string, logService *loggerservice.LoggerService) *Mem
 	}
 }
 
+// Get returns a metric if exists.
 func (m *Memstorage) Get(_ context.Context, metricType metric.Type, metricName string) (*metric.Metric, bool) {
 	m.mx.Lock()
 	defer m.mx.Unlock()
@@ -38,6 +44,7 @@ func (m *Memstorage) Get(_ context.Context, metricType metric.Type, metricName s
 	return met, ok
 }
 
+// Update updates a metric if exists.
 func (m *Memstorage) Update(_ context.Context, updatedMetric *metric.Metric) (*metric.Metric, error) {
 	m.mx.Lock()
 	defer m.mx.Unlock()
@@ -54,6 +61,7 @@ func (m *Memstorage) Update(_ context.Context, updatedMetric *metric.Metric) (*m
 	return res, nil
 }
 
+// UpdateAll updates all the metrics in list.
 func (m *Memstorage) UpdateAll(ctx context.Context, metrics []*metric.Metric) error {
 	for _, met := range metrics {
 		_, _ = m.Update(ctx, met)
@@ -62,6 +70,7 @@ func (m *Memstorage) UpdateAll(ctx context.Context, metrics []*metric.Metric) er
 	return nil
 }
 
+// Replace replaces metric with another one.
 func (m *Memstorage) Replace(_ context.Context, met *metric.Metric) {
 	m.mx.Lock()
 	defer m.mx.Unlock()
@@ -75,6 +84,7 @@ func (m *Memstorage) Replace(_ context.Context, met *metric.Metric) {
 	met.FillHash(m.hashKey)
 }
 
+// All returns all the metrics.
 func (m *Memstorage) All(_ context.Context) []*metric.Metric {
 	m.mx.Lock()
 	defer m.mx.Unlock()

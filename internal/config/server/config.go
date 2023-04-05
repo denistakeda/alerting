@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Config is a configuration for alerting server
 type Config struct {
 	Address       string        `env:"ADDRESS"`
 	StoreInterval time.Duration `env:"STORE_INTERVAL"`
@@ -17,6 +18,7 @@ type Config struct {
 	DatabaseDSN   string        `env:"DATABASE_DSN"`
 }
 
+// GetConfig extracts the configuration from environment variables and flags
 func GetConfig() (Config, error) {
 	config := Config{}
 

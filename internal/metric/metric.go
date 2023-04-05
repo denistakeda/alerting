@@ -11,13 +11,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Type represents a type of the metric.
 type Type string
 
 const (
-	Gauge   Type = "gauge"
+	// Gauge metric type.
+	Gauge Type = "gauge"
+	// Counter metric type.
 	Counter Type = "counter"
 )
 
+// Metric is a record to store a metric of one of two types: gauge or counter.
 type Metric struct {
 	ID    string   `json:"id" db:"id"`
 	MType Type     `json:"type" db:"mtype"`
@@ -26,6 +30,7 @@ type Metric struct {
 	Hash  string   `json:"hash,omitempty" db:"-"`
 }
 
+// NewGauge instantiates a new metric of type Gauge.
 func NewGauge(name string, value float64) *Metric {
 	return &Metric{
 		MType: Gauge,
@@ -34,6 +39,7 @@ func NewGauge(name string, value float64) *Metric {
 	}
 }
 
+// NewCounter instantiates a new metric of type Counter.
 func NewCounter(name string, delta int64) *Metric {
 	return &Metric{
 		MType: Counter,
@@ -42,14 +48,17 @@ func NewCounter(name string, delta int64) *Metric {
 	}
 }
 
+// Type returns type of the metric.
 func (m *Metric) Type() Type {
 	return m.MType
 }
 
+// Name returns a name of a metric.
 func (m *Metric) Name() string {
 	return m.ID
 }
 
+// StrValue returns the string representation of metric value.
 func (m *Metric) StrValue() string {
 	switch m.MType {
 	case Gauge:
@@ -61,6 +70,7 @@ func (m *Metric) StrValue() string {
 	}
 }
 
+// StrType returns the string representation of metric type.
 func (m *Metric) StrType() string {
 	switch m.MType {
 	case Gauge:
@@ -72,6 +82,7 @@ func (m *Metric) StrType() string {
 	}
 }
 
+// Validate validates the metric.
 func (m *Metric) Validate() error {
 	switch m.MType {
 	case Gauge:
@@ -89,6 +100,7 @@ func (m *Metric) Validate() error {
 	return nil
 }
 
+// String representation of a metric.
 func (m *Metric) String() string {
 	res, err := json.Marshal(m)
 	if err != nil {
@@ -97,6 +109,7 @@ func (m *Metric) String() string {
 	return string(res)
 }
 
+// FillHash fills hash of a metric.
 func (m *Metric) FillHash(hashKey string) {
 	if hashKey == "" {
 		return
@@ -110,6 +123,7 @@ func (m *Metric) FillHash(hashKey string) {
 	}
 }
 
+// VerifyHash verifies the hash of the metric.
 func (m *Metric) VerifyHash(hashKey string) error {
 	if hashKey == "" {
 		return nil
@@ -131,6 +145,7 @@ func (m *Metric) VerifyHash(hashKey string) error {
 	return nil
 }
 
+// Update updates the metric with new data.
 func Update(old *Metric, new *Metric) *Metric {
 	if old == nil {
 		return new
@@ -152,6 +167,7 @@ func Update(old *Metric, new *Metric) *Metric {
 	}
 }
 
+// TypeFromString converts a string into a metric type.
 func TypeFromString(str string) (Type, error) {
 	switch str {
 	case "gauge":

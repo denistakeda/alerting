@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/denistakeda/alerting/internal/storage"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
@@ -15,6 +16,9 @@ import (
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
 )
 
+var _ storage.Storage = (*Filestorage)(nil)
+
+// Filestorage is an implementation of Storage which stores data in a file.
 type Filestorage struct {
 	mstorage *memstorage.Memstorage
 
@@ -24,6 +28,7 @@ type Filestorage struct {
 	logger zerolog.Logger
 }
 
+// NewFileStorage instantiates a new instance of Filestorage
 func NewFileStorage(
 	ctx context.Context,
 	storeFile string,
@@ -56,10 +61,12 @@ func NewFileStorage(
 	return instance, nil
 }
 
+// Get returns a metric if exists.
 func (fs *Filestorage) Get(ctx context.Context, metricType metric.Type, metricName string) (*metric.Metric, bool) {
 	return fs.mstorage.Get(ctx, metricType, metricName)
 }
 
+// Update updates a metric if exists.
 func (fs *Filestorage) Update(ctx context.Context, updatedMetric *metric.Metric) (*metric.Metric, error) {
 	res, err := fs.mstorage.Update(ctx, updatedMetric)
 	if fs.storeTicker == nil {
@@ -68,6 +75,7 @@ func (fs *Filestorage) Update(ctx context.Context, updatedMetric *metric.Metric)
 	return res, err
 }
 
+// UpdateAll updates all the metrics in list.
 func (fs *Filestorage) UpdateAll(ctx context.Context, metrics []*metric.Metric) error {
 	for _, met := range metrics {
 		_, err := fs.Update(ctx, met)
@@ -79,10 +87,12 @@ func (fs *Filestorage) UpdateAll(ctx context.Context, metrics []*metric.Metric) 
 	return nil
 }
 
+// All returns all the metrics.
 func (fs *Filestorage) All(ctx context.Context) []*metric.Metric {
 	return fs.mstorage.All(ctx)
 }
 
+// Close closes the connection to db.
 func (fs *Filestorage) Close(ctx context.Context) error {
 	fs.storeTicker.Stop()
 	fs.dump(ctx)

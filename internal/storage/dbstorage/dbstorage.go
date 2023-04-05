@@ -17,12 +17,14 @@ import (
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
 )
 
+// DBStorage is a storage with database connection.
 type DBStorage struct {
 	db      *sqlx.DB
 	hashKey string
 	logger  zerolog.Logger
 }
 
+// NewDBStorage instantiates a new DBStorage.
 func NewDBStorage(
 	dsn string,
 	hashKey string,
@@ -47,6 +49,7 @@ func NewDBStorage(
 	}, nil
 }
 
+// Get returns a metric if exists.
 func (dbs *DBStorage) Get(ctx context.Context, metricType metric.Type, metricName string) (*metric.Metric, bool) {
 	var met metric.Metric
 	err := dbs.db.GetContext(ctx, &met, `
@@ -64,6 +67,7 @@ func (dbs *DBStorage) Get(ctx context.Context, metricType metric.Type, metricNam
 	return &met, true
 }
 
+// Update updates a metric if exists.
 func (dbs *DBStorage) Update(ctx context.Context, met *metric.Metric) (*metric.Metric, error) {
 	oldMet, ok := dbs.Get(ctx, met.Type(), met.Name())
 	newMet := metric.Update(oldMet, met)
@@ -91,6 +95,7 @@ func (dbs *DBStorage) Update(ctx context.Context, met *metric.Metric) (*metric.M
 	return newMet, nil
 }
 
+// UpdateAll updates all the metrics in list.
 func (dbs *DBStorage) UpdateAll(ctx context.Context, metrics []*metric.Metric) error {
 	tx, err := dbs.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -129,6 +134,7 @@ func (dbs *DBStorage) UpdateAll(ctx context.Context, metrics []*metric.Metric) e
 }
 
 // TODO: return error
+// All returns all the metrics.
 func (dbs *DBStorage) All(ctx context.Context) []*metric.Metric {
 	result := make([]*metric.Metric, 0)
 
@@ -144,6 +150,7 @@ func (dbs *DBStorage) All(ctx context.Context) []*metric.Metric {
 	return result
 }
 
+// Ping pings the database.
 func (dbs *DBStorage) Ping(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -153,6 +160,7 @@ func (dbs *DBStorage) Ping(ctx context.Context) error {
 	return nil
 }
 
+// Close closes the connection to db.
 func (dbs *DBStorage) Close(_ context.Context) error {
 	return dbs.db.Close()
 }
