@@ -1,0 +1,43 @@
+info:
+  contact:
+    email: denis.takeda@gmail.com
+  description: Service of metrics and alerting
+  title: Alerting Service API
+  version: "1.0"
+paths:
+  /metric/{metric_type}/{metric_name}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Metric Name
+        in: path
+        name: metric_name
+        required: true
+        type: string
+      - description: Metric Type
+        in: path
+        name: metric_type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+      summary: returns a metric by name and typ
+  /ping:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: pong
+          schema:
+            type: string
+      summary: health of the service
+swagger: "2.0"

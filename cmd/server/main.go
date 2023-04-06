@@ -1,5 +1,13 @@
 package main
 
+// @Title Alerting Service API
+// @Description Service of metrics and alerting
+// @Version 1.0
+
+// @Contact.email denis.takeda@gmail.com
+
+// @Host http://127.0.0.1:8080/
+
 import (
 	"context"
 	"log"
@@ -7,10 +15,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/gin-contrib/gzip"
-	"github.com/gin-contrib/logger"
-	"github.com/gin-gonic/gin"
-
+	"github.com/denistakeda/alerting/docs"
 	servercfg "github.com/denistakeda/alerting/internal/config/server"
 	"github.com/denistakeda/alerting/internal/handler"
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
@@ -18,6 +23,11 @@ import (
 	"github.com/denistakeda/alerting/internal/storage/dbstorage"
 	"github.com/denistakeda/alerting/internal/storage/filestorage"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
+	"github.com/gin-contrib/gzip"
+	"github.com/gin-contrib/logger"
+	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -37,6 +47,9 @@ func main() {
 	r := newRouter()
 	apiHandler := handler.New(storage, conf.Key, logService)
 	apiHandler.RegisterHandlers(r)
+
+	docs.SwaggerInfo.BasePath = "/"
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	r.LoadHTMLGlob("internal/templates/*")
 	serverChan := runServer(r, conf.Address)

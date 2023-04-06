@@ -13,6 +13,15 @@ type getMetricURI struct {
 	MetricName string `uri:"metric_name" binding:"required"`
 }
 
+// GetMetricHandler godoc
+// @Summary returns a metric by name and typ
+// @Accept  json
+// @Produce json
+// @Param metric_name path string true "Metric Name"
+// @Param metric_type path string true "Metric Type"
+// @Failure 400
+// @Failure 404
+// @Router /metric/{metric_type}/{metric_name} [get]
 func (h *Handler) GetMetricHandler(c *gin.Context) {
 	var uri getMetricURI
 	if err := c.ShouldBindUri(&uri); err != nil {
