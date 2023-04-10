@@ -4,15 +4,12 @@ import (
 	"context"
 	"sync"
 
-	"github.com/denistakeda/alerting/internal/storage"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
 	"github.com/denistakeda/alerting/internal/metric"
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
 )
-
-var _ storage.Storage = (*Memstorage)(nil)
 
 // Memstorage is a memory storage.
 type Memstorage struct {

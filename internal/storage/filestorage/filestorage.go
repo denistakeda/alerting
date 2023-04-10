@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/denistakeda/alerting/internal/storage"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
@@ -15,8 +14,6 @@ import (
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
 )
-
-var _ storage.Storage = (*Filestorage)(nil)
 
 // Filestorage is an implementation of Storage which stores data in a file.
 type Filestorage struct {
