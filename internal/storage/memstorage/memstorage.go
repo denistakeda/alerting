@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/denistakeda/alerting/internal/storage"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
 	"github.com/denistakeda/alerting/internal/metric"
@@ -15,18 +16,20 @@ var _ storage.Storage = (*Memstorage)(nil)
 
 // Memstorage is a memory storage.
 type Memstorage struct {
-	types   map[metric.Type]map[string]*metric.Metric
-	hashKey string
-	mx      sync.Mutex
-	logger  zerolog.Logger
+	gauges   map[string]*metric.Metric
+	counters map[string]*metric.Metric
+	hashKey  string
+	mx       sync.Mutex
+	logger   zerolog.Logger
 }
 
 // NewMemStorage instantiates a new MemStorage instance.
 func NewMemStorage(hashKey string, logService *loggerservice.LoggerService) *Memstorage {
 	return &Memstorage{
-		types:   make(map[metric.Type]map[string]*metric.Metric),
-		hashKey: hashKey,
-		logger:  logService.ComponentLogger("Memstorage"),
+		gauges:   make(map[string]*metric.Metric),
+		counters: make(map[string]*metric.Metric),
+		hashKey:  hashKey,
+		logger:   logService.ComponentLogger("Memstorage"),
 	}
 }
 
@@ -35,13 +38,16 @@ func (m *Memstorage) Get(_ context.Context, metricType metric.Type, metricName s
 	m.mx.Lock()
 	defer m.mx.Unlock()
 
-	group, ok := m.types[metricType]
-	if !ok {
-		return nil, false
+	if metricType == metric.Gauge {
+		met, ok := m.gauges[metricName]
+		return met, ok
+	}
+	if metricType == metric.Counter {
+		met, ok := m.counters[metricName]
+		return met, ok
 	}
 
-	met, ok := group[metricName]
-	return met, ok
+	return nil, false
 }
 
 // Update updates a metric if exists.
@@ -49,16 +55,27 @@ func (m *Memstorage) Update(_ context.Context, updatedMetric *metric.Metric) (*m
 	m.mx.Lock()
 	defer m.mx.Unlock()
 
-	group, ok := m.types[updatedMetric.Type()]
-	if !ok {
-		group = make(map[string]*metric.Metric)
-		m.types[updatedMetric.Type()] = group
+	if updatedMetric.Type() == metric.Gauge {
+		m.gauges[updatedMetric.Name()] = updatedMetric
+		updatedMetric.FillHash(m.hashKey)
+		return updatedMetric, nil
 	}
 
-	res := metric.Update(group[updatedMetric.Name()], updatedMetric)
-	group[updatedMetric.Name()] = res
-	res.FillHash(m.hashKey)
-	return res, nil
+	if updatedMetric.Type() == metric.Counter {
+		res, ok := m.counters[updatedMetric.Name()]
+		if !ok {
+			m.counters[updatedMetric.Name()] = updatedMetric
+			updatedMetric.FillHash(m.hashKey)
+			return updatedMetric, nil
+		}
+
+		res = metric.Update(res, updatedMetric)
+		res.FillHash(m.hashKey)
+		m.counters[updatedMetric.Name()] = res
+		return res, nil
+	}
+
+	return nil, errors.New("unknown metric type")
 }
 
 // UpdateAll updates all the metrics in list.
@@ -75,12 +92,11 @@ func (m *Memstorage) Replace(_ context.Context, met *metric.Metric) {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 
-	group, ok := m.types[met.Type()]
-	if !ok {
-		group = make(map[string]*metric.Metric)
-		m.types[met.Type()] = group
+	if met.Type() == metric.Gauge {
+		m.gauges[met.Name()] = met
+	} else {
+		m.counters[met.Name()] = met
 	}
-	group[met.Name()] = met
 	met.FillHash(m.hashKey)
 }
 
@@ -89,12 +105,14 @@ func (m *Memstorage) All(_ context.Context) []*metric.Metric {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 
-	var res []*metric.Metric
-	for _, group := range m.types {
-		for _, met := range group {
-			res = append(res, met)
-		}
+	res := make([]*metric.Metric, 0, len(m.gauges)+len(m.counters))
+	for _, c := range m.counters {
+		res = append(res, c)
 	}
+	for _, g := range m.gauges {
+		res = append(res, g)
+	}
+
 	return res
 }
 
