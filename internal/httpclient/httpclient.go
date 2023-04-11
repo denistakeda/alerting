@@ -2,6 +2,7 @@ package httpclient
 
 import "net/http"
 
+// HTTPClient is a rate-limited client
 type HTTPClient struct {
 	bus chan *task
 }
@@ -12,6 +13,7 @@ type task struct {
 	errChan  chan<- error
 }
 
+// New instantiates a new HTTPClient
 func New(rateLimit int) *HTTPClient {
 	bus := make(chan *task)
 	client := &http.Client{}
@@ -25,6 +27,7 @@ func New(rateLimit int) *HTTPClient {
 	}
 }
 
+// Do executes the query with rate-limiting mechanism
 func (c *HTTPClient) Do(req *http.Request) (*http.Response, error) {
 	respChan := make(chan *http.Response)
 	errChan := make(chan error)

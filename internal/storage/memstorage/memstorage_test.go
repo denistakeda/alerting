@@ -2,13 +2,15 @@ package memstorage
 
 import (
 	"context"
-	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	"testing"
+
+	"github.com/denistakeda/alerting/internal/services/loggerservice"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/denistakeda/alerting/internal/metric"
 	"github.com/denistakeda/alerting/internal/storage"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_memstorage_ImplementsStorage(t *testing.T) {
