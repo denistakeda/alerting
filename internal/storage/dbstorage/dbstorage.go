@@ -120,7 +120,7 @@ func (dbs *DBStorage) UpdateAll(ctx context.Context, metrics []*metric.Metric) e
 	for _, met := range metrics {
 		if _, err := stmt.Exec(met.ID, met.MType, met.Value, met.Delta); err != nil {
 			if err2 := tx.Rollback(); err2 != nil {
-				dbs.logger.Fatal().Err(err2).Msg("update drivers: unable to rollback")
+				dbs.logger.Error().Err(err2).Msg("update drivers: unable to rollback")
 			}
 			return errors.Wrapf(err, "failed to exec query with metric %v", met)
 		}
