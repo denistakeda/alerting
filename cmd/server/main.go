@@ -10,6 +10,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -30,7 +31,15 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
+
 func main() {
+	printInfo()
+
 	conf, err := servercfg.GetConfig()
 	if err != nil {
 		log.Fatal(err)
@@ -62,6 +71,12 @@ func main() {
 	}
 
 	stopServer(storage)
+}
+
+func printInfo() {
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
 }
 
 func stopServer(storage s.Storage) {

@@ -26,7 +26,15 @@ import (
 	"github.com/denistakeda/alerting/internal/storage/memstorage"
 )
 
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
+
 func main() {
+	printInfo()
+
 	conf, err := agentcfg.GetConfig()
 	if err != nil {
 		log.Fatal(err)
@@ -41,6 +49,12 @@ func main() {
 
 	go readStats(conf.PollInterval, memStorage, logger)
 	sendStats(conf.ReportInterval, conf.RateLimit, logger, memStorage, conf.Address)
+}
+
+func printInfo() {
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
 }
 
 func readStats(pollInterval time.Duration, store storage.Storage, logger zerolog.Logger) {
