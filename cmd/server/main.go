@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/denistakeda/alerting/docs"
 	servercfg "github.com/denistakeda/alerting/internal/config/server"
@@ -77,6 +78,12 @@ func main() {
 	case <-interruptChan:
 		log.Println("Program was interrupted")
 	}
+
+	// Clean up before finishing
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	storage.Close(ctx)
 }
 
 func printInfo() {
