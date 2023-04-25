@@ -48,7 +48,7 @@ func main() {
 	memStorage := memstorage.NewMemStorage(conf.Key, logService)
 
 	go readStats(conf.PollInterval, memStorage, logger)
-	sendStats(conf.ReportInterval, conf.RateLimit, logger, memStorage, conf.Address)
+	sendStats(conf.ReportInterval, conf.RateLimit, logger, memStorage, conf.Address, conf.CryptoKey)
 }
 
 func printInfo() {
@@ -81,8 +81,12 @@ func sendStats(
 	logger zerolog.Logger,
 	store storage.Storage,
 	address string,
+	cert string,
 ) {
-	client := httpclient.New(rateLimit)
+	client, err := httpclient.New(rateLimit, cert)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("unable to initiate a client")
+	}
 
 	// Task publisher
 	reportTicker := time.NewTicker(reportInterval)

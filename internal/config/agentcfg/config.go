@@ -21,6 +21,7 @@ type Config struct {
 	PollInterval   time.Duration `env:"POLL_INTERVAL" json:"poll_interval"`
 	Key            string        `env:"KEY" json:"key"`
 	RateLimit      int           `env:"RATE_LIMIT" json:"rate_limit"`
+	CryptoKey      string        `env:"CRYPTO_KEY" json:"crypto_key"`
 }
 
 // GetConfig extracts the configuration from environment variables and flags
@@ -56,6 +57,7 @@ func GetConfig() (Config, error) {
 	flag.DurationVar(&config.PollInterval, "p", config.PollInterval, "Interval to collect metrics")
 	flag.StringVar(&config.Key, "k", config.Key, "Key to sign")
 	flag.IntVar(&config.RateLimit, "l", config.RateLimit, "The maximum amount of active requests")
+	flag.StringVar(&config.CryptoKey, "c", config.CryptoKey, "Path to the certificate")
 	flag.Parse()
 
 	// Populate data from the env variables

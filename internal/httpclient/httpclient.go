@@ -1,6 +1,13 @@
 package httpclient
 
-import "net/http"
+import (
+	"crypto/tls"
+	"crypto/x509"
+	"net/http"
+	"os"
+
+	"github.com/pkg/errors"
+)
 
 // HTTPClient is a rate-limited client
 type HTTPClient struct {
@@ -14,17 +21,33 @@ type task struct {
 }
 
 // New instantiates a new HTTPClient
-func New(rateLimit int) *HTTPClient {
-	bus := make(chan *task)
+func New(rateLimit int, cert string) (*HTTPClient, error) {
 	client := &http.Client{}
 
+	if cert != "" {
+		caCert, err := os.ReadFile(cert)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to find certificate file")
+		}
+
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+
+		client.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: caCertPool,
+			},
+		}
+	}
+
+	bus := make(chan *task)
 	for i := 0; i < rateLimit; i++ {
 		go handleRequests(bus, client)
 	}
 
 	return &HTTPClient{
 		bus: bus,
-	}
+	}, nil
 }
 
 // Do executes the query with rate-limiting mechanism
