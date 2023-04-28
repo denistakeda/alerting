@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -41,13 +40,13 @@ func GetConfig() (Config, error) {
 	if config.Config != "" {
 		content, err := os.ReadFile(config.Config)
 		if err != nil {
-			log.Fatal("Error when opening file: ", err)
+			return config, errors.Wrap(err, "error during Unmarshal()")
 		}
 
 		// Now let's unmarshall the data into `payload`
 		err = json.Unmarshal(content, &config)
 		if err != nil {
-			log.Fatal("Error during Unmarshal(): ", err)
+			return config, errors.Wrap(err, "error during Unmarshal()")
 		}
 	}
 
