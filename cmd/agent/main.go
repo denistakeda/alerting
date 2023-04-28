@@ -8,16 +8,18 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
+	"os/signal"
 	"runtime"
+	"syscall"
 	"time"
-
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
-	"github.com/shirou/gopsutil/v3/cpu"
 
 	"github.com/denistakeda/alerting/internal/config/agentcfg"
 	"github.com/denistakeda/alerting/internal/httpclient"
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+	"github.com/shirou/gopsutil/v3/cpu"
 
 	"github.com/shirou/gopsutil/v3/mem"
 
@@ -47,14 +49,35 @@ func main() {
 
 	memStorage := memstorage.NewMemStorage(conf.Key, logService)
 
+	client, err := httpclient.New(conf.RateLimit, conf.CryptoKey)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("unable to initiate a client")
+	}
+
 	go readStats(conf.PollInterval, memStorage, logger)
-	sendStats(conf.ReportInterval, conf.RateLimit, logger, memStorage, conf.Address)
+	go sendStats(client, conf.ReportInterval, logger, memStorage, conf.Address)
+
+	<-handleInterrupt()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := sendMetrics(client, memStorage.All(ctx), conf.Address); err != nil {
+		logger.Fatal().Err(err).Msg("unable to send metrics before stop")
+	}
 }
 
 func printInfo() {
 	fmt.Printf("Build version: %s\n", buildVersion)
 	fmt.Printf("Build date: %s\n", buildDate)
 	fmt.Printf("Build commit: %s\n", buildCommit)
+}
+
+func handleInterrupt() <-chan os.Signal {
+	out := make(chan os.Signal, 2)
+	signal.Notify(out, os.Interrupt)
+	signal.Notify(out, syscall.SIGTERM)
+	return out
 }
 
 func readStats(pollInterval time.Duration, store storage.Storage, logger zerolog.Logger) {
@@ -76,14 +99,12 @@ func readStats(pollInterval time.Duration, store storage.Storage, logger zerolog
 }
 
 func sendStats(
+	client *httpclient.HTTPClient,
 	reportInterval time.Duration,
-	rateLimit int,
 	logger zerolog.Logger,
 	store storage.Storage,
 	address string,
 ) {
-	client := httpclient.New(rateLimit)
-
 	// Task publisher
 	reportTicker := time.NewTicker(reportInterval)
 	for range reportTicker.C {

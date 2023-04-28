@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/denistakeda/alerting/docs"
 	servercfg "github.com/denistakeda/alerting/internal/config/server"
@@ -54,14 +55,22 @@ func main() {
 	}
 
 	r := newRouter()
-	apiHandler := handler.New(storage, conf.Key, logService)
-	apiHandler.RegisterHandlers(r)
+	apiHandler := handler.New(handler.Params{
+		Addr:       conf.Address,
+		HashKey:    conf.Key,
+		Cert:       conf.Certificate,
+		PrivateKey: conf.CryptoKey,
+		Engine:     r,
+		Storage:    storage,
+		LogService: logService,
+	})
+	defer apiHandler.Stop()
 
 	docs.SwaggerInfo.BasePath = "/"
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	r.LoadHTMLGlob("internal/templates/*")
-	serverChan := runServer(r, conf.Address)
+	serverChan := apiHandler.Start()
 	interruptChan := handleInterrupt()
 	select {
 	case serverError := <-serverChan:
@@ -70,19 +79,17 @@ func main() {
 		log.Println("Program was interrupted")
 	}
 
-	stopServer(storage)
+	// Clean up before finishing
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	storage.Close(ctx)
 }
 
 func printInfo() {
 	fmt.Printf("Build version: %s\n", buildVersion)
 	fmt.Printf("Build date: %s\n", buildDate)
 	fmt.Printf("Build commit: %s\n", buildCommit)
-}
-
-func stopServer(storage s.Storage) {
-	if err := storage.Close(context.Background()); err != nil {
-		log.Printf("Unable to properly stop the storage: %v\n", err)
-	}
 }
 
 func newRouter() *gin.Engine {
@@ -94,15 +101,6 @@ func newRouter() *gin.Engine {
 	r.Use(logger.SetLogger())
 
 	return r
-}
-
-func runServer(r *gin.Engine, address string) <-chan error {
-	out := make(chan error)
-	go func() {
-		err := r.Run(address)
-		out <- err
-	}()
-	return out
 }
 
 func handleInterrupt() <-chan os.Signal {

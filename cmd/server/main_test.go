@@ -78,9 +78,19 @@ func Test_updateMetric(t *testing.T) {
 			s := mocks.NewMockStorage(ctrl)
 			s.EXPECT().Update(gomock.Any(), tt.met).Return(tt.met, nil).AnyTimes()
 
-			apiHandler := handler.New(s, "", loggerservice.New())
 			router := newRouter()
-			apiHandler.RegisterHandlers(router)
+			apiHandler := handler.New(handler.Params{
+				Addr:       "",
+				HashKey:    "",
+				Cert:       "",
+				PrivateKey: "",
+				Engine:     router,
+				Storage:    s,
+				LogService: loggerservice.New(),
+			})
+
+			apiHandler.Start()
+			defer apiHandler.Stop()
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("POST", tt.request, nil)
@@ -165,9 +175,19 @@ func Test_getMetric(t *testing.T) {
 				Return(tt.storageMock.retMetric, tt.storageMock.retOk).
 				AnyTimes()
 
-			apiHandler := handler.New(s, "", loggerservice.New())
 			router := newRouter()
-			apiHandler.RegisterHandlers(router)
+			apiHandler := handler.New(handler.Params{
+				Addr:       "",
+				HashKey:    "",
+				Cert:       "",
+				PrivateKey: "",
+				Engine:     router,
+				Storage:    s,
+				LogService: loggerservice.New(),
+			})
+
+			apiHandler.Start()
+			defer apiHandler.Stop()
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", tt.request, nil)
@@ -266,9 +286,19 @@ func Test_update(t *testing.T) {
 				Return(tt.storageMock.resMetric, tt.storageMock.resError).
 				AnyTimes()
 
-			apiHandler := handler.New(s, "", loggerservice.New())
 			router := newRouter()
-			apiHandler.RegisterHandlers(router)
+			apiHandler := handler.New(handler.Params{
+				Addr:       "",
+				HashKey:    "",
+				Cert:       "",
+				PrivateKey: "",
+				Engine:     router,
+				Storage:    s,
+				LogService: loggerservice.New(),
+			})
+
+			apiHandler.Start()
+			defer apiHandler.Stop()
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("POST", "/update/", bytes.NewBuffer(tt.requestBody))
