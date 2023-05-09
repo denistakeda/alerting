@@ -22,6 +22,7 @@ type Config struct {
 	DatabaseDSN   string        `env:"DATABASE_DSN" json:"database_dsn"`
 	Certificate   string        `env:"CERTIFICATE" json:"certificate"`
 	CryptoKey     string        `env:"CRYPTO_KEY" json:"crypto_key"`
+	TrustedSubnet string        `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
 }
 
 // GetConfig extracts the configuration from environment variables and flags
@@ -60,6 +61,7 @@ func GetConfig() (Config, error) {
 	flag.StringVar(&config.DatabaseDSN, "d", config.DatabaseDSN, "Database DSN")
 	flag.StringVar(&config.Certificate, "certificate", config.Certificate, "Path to a file with a certificate")
 	flag.StringVar(&config.CryptoKey, "crypto-key", config.CryptoKey, "Path to a file with a private key")
+	flag.StringVar(&config.TrustedSubnet, "t", config.TrustedSubnet, "Trusted subnet")
 	flag.Parse()
 
 	// Populate data from the env variables
