@@ -12,6 +12,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -20,6 +21,7 @@ import (
 	"github.com/denistakeda/alerting/docs"
 	servercfg "github.com/denistakeda/alerting/internal/config/server"
 	"github.com/denistakeda/alerting/internal/handler"
+	"github.com/denistakeda/alerting/internal/middleware"
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	s "github.com/denistakeda/alerting/internal/storage"
 	"github.com/denistakeda/alerting/internal/storage/dbstorage"
@@ -54,12 +56,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	r := newRouter()
+	r := newRouter(conf.TrustedSubnet)
 	apiHandler := handler.New(handler.Params{
 		Addr:       conf.Address,
 		HashKey:    conf.Key,
 		Cert:       conf.Certificate,
 		PrivateKey: conf.CryptoKey,
+
 		Engine:     r,
 		Storage:    storage,
 		LogService: logService,
@@ -92,13 +95,22 @@ func printInfo() {
 	fmt.Printf("Build commit: %s\n", buildCommit)
 }
 
-func newRouter() *gin.Engine {
+func newRouter(trustedSubnet string) *gin.Engine {
 	r := gin.New()
 
 	r.RedirectTrailingSlash = false
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 	r.Use(gin.Recovery())
 	r.Use(logger.SetLogger())
+
+	if trustedSubnet != "" {
+		_, subnet, err := net.ParseCIDR(trustedSubnet)
+		if err != nil {
+			log.Fatal("'TrustedSubnet' is incorrect")
+		}
+
+		r.Use(middleware.CheckSubnetMiddleware(subnet))
+	}
 
 	return r
 }
