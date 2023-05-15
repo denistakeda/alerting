@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/denistakeda/alerting/proto"
 	"github.com/pkg/errors"
 )
 
@@ -45,6 +46,20 @@ func NewCounter(name string, delta int64) *Metric {
 		MType: Counter,
 		ID:    name,
 		Delta: &delta,
+	}
+}
+
+func FromProto(p *proto.Metric) *Metric {
+	mtype := Gauge
+	if p.Mtype == proto.Metric_COUNTER {
+		mtype = Counter
+	}
+	return &Metric{
+		ID:    p.Id,
+		MType: mtype,
+		Value: &p.Value,
+		Delta: &p.Delta,
+		Hash:  p.Hash,
 	}
 }
 

@@ -20,6 +20,7 @@ import (
 
 	"github.com/denistakeda/alerting/docs"
 	servercfg "github.com/denistakeda/alerting/internal/config/server"
+	"github.com/denistakeda/alerting/internal/grpcserver"
 	"github.com/denistakeda/alerting/internal/handler"
 	"github.com/denistakeda/alerting/internal/middleware"
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
@@ -67,17 +68,23 @@ func main() {
 		Storage:    storage,
 		LogService: logService,
 	})
+	serverChan := apiHandler.Start()
 	defer apiHandler.Stop()
+
+	grpcServer := grpcserver.NewGRPCServer(logService, storage, conf.GRPCAddress)
+	grpcServerChan := grpcServer.Start()
+	defer grpcServer.Stop()
 
 	docs.SwaggerInfo.BasePath = "/"
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	r.LoadHTMLGlob("internal/templates/*")
-	serverChan := apiHandler.Start()
 	interruptChan := handleInterrupt()
 	select {
 	case serverError := <-serverChan:
 		log.Println(serverError)
+	case grpcServerError := <-grpcServerChan:
+		log.Println(grpcServerError)
 	case <-interruptChan:
 		log.Println("Program was interrupted")
 	}
