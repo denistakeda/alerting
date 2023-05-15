@@ -1,18 +1,26 @@
 package httpclient
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 
+	"github.com/denistakeda/alerting/internal/metric"
+	"github.com/denistakeda/alerting/internal/ports"
 	"github.com/pkg/errors"
 )
 
 // HTTPClient is a rate-limited client
 type HTTPClient struct {
-	bus chan *task
+	bus     chan *task
+	address string
 }
+
+var _ ports.Client = (*HTTPClient)(nil)
 
 type task struct {
 	request  *http.Request
@@ -21,7 +29,7 @@ type task struct {
 }
 
 // New instantiates a new HTTPClient
-func New(rateLimit int, cert string) (*HTTPClient, error) {
+func New(rateLimit int, cert string, address string) (*HTTPClient, error) {
 	client := &http.Client{}
 
 	if cert != "" {
@@ -46,8 +54,35 @@ func New(rateLimit int, cert string) (*HTTPClient, error) {
 	}
 
 	return &HTTPClient{
-		bus: bus,
+		bus:     bus,
+		address: address,
 	}, nil
+}
+
+func (c *HTTPClient) SendMetrics(metrics []*metric.Metric) error {
+	url := fmt.Sprintf("%s/updates/", c.address)
+	m, err := json.Marshal(metrics)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal metrics")
+	}
+	body := bytes.NewBuffer(m)
+
+	req, err := http.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		return errors.Wrap(err, "failed to create a request")
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return errors.Wrapf(err, "unable to file a request to URL: %s", url)
+	}
+	if err := resp.Body.Close(); err != nil {
+		return errors.Wrap(err, "unable to close a body")
+	}
+
+	return nil
 }
 
 // Do executes the query with rate-limiting mechanism

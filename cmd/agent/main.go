@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
-	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
@@ -15,7 +12,9 @@ import (
 	"time"
 
 	"github.com/denistakeda/alerting/internal/config/agentcfg"
+	"github.com/denistakeda/alerting/internal/grpcclient"
 	"github.com/denistakeda/alerting/internal/httpclient"
+	"github.com/denistakeda/alerting/internal/ports"
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -49,21 +48,29 @@ func main() {
 
 	memStorage := memstorage.NewMemStorage(conf.Key, logService)
 
-	client, err := httpclient.New(conf.RateLimit, conf.CryptoKey)
+	client, err := makeClient(conf)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("unable to initiate a client")
 	}
 
 	go readStats(conf.PollInterval, memStorage, logger)
-	go sendStats(client, conf.ReportInterval, logger, memStorage, conf.Address)
+	go sendStats(client, conf.ReportInterval, logger, memStorage)
 
 	<-handleInterrupt()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := sendMetrics(client, memStorage.All(ctx), conf.Address); err != nil {
+	if err := client.SendMetrics(memStorage.All(ctx)); err != nil {
 		logger.Fatal().Err(err).Msg("unable to send metrics before stop")
+	}
+}
+
+func makeClient(conf agentcfg.Config) (ports.Client, error) {
+	if conf.GRPCAddress == "" {
+		return httpclient.New(conf.RateLimit, conf.CryptoKey, conf.Address)
+	} else {
+		return grpcclient.NewGRPCClient(conf.GRPCAddress)
 	}
 }
 
@@ -99,17 +106,16 @@ func readStats(pollInterval time.Duration, store storage.Storage, logger zerolog
 }
 
 func sendStats(
-	client *httpclient.HTTPClient,
+	client ports.Client,
 	reportInterval time.Duration,
 	logger zerolog.Logger,
 	store storage.Storage,
-	address string,
 ) {
 	// Task publisher
 	reportTicker := time.NewTicker(reportInterval)
 	for range reportTicker.C {
 		metrics := store.All(context.Background())
-		if err := sendMetrics(client, metrics, address); err != nil {
+		if err := client.SendMetrics(metrics); err != nil {
 			logger.Error().Err(err).Msg("failed to send metrics")
 			continue
 		}
@@ -181,30 +187,4 @@ func registerMetric(store storage.Storage, logger zerolog.Logger, m *metric.Metr
 	if err != nil {
 		logger.Error().Err(err).Msgf("Failed to update metric %v\n", m)
 	}
-}
-
-func sendMetrics(client *httpclient.HTTPClient, metrics []*metric.Metric, server string) error {
-	url := fmt.Sprintf("%s/updates/", server)
-	m, err := json.Marshal(metrics)
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal metrics")
-	}
-	body := bytes.NewBuffer(m)
-
-	req, err := http.NewRequest(http.MethodPost, url, body)
-	if err != nil {
-		return errors.Wrap(err, "failed to create a request")
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return errors.Wrapf(err, "unable to file a request to URL: %s", url)
-	}
-	if err := resp.Body.Close(); err != nil {
-		return errors.Wrap(err, "unable to close a body")
-	}
-
-	return nil
 }

@@ -16,6 +16,7 @@ import (
 type Config struct {
 	Config         string        `env:"CONFIG"`
 	Address        string        `env:"ADDRESS" json:"address"`
+	GRPCAddress    string        `env:"GRPC_ADDRESS" json:"grpc_address"`
 	ReportInterval time.Duration `env:"REPORT_INTERVAL" json:"report_interval"`
 	PollInterval   time.Duration `env:"POLL_INTERVAL" json:"poll_interval"`
 	Key            string        `env:"KEY" json:"key"`
@@ -34,7 +35,7 @@ func GetConfig() (Config, error) {
 	}
 
 	// Read from file
-	flag.StringVar(&config.Config, "c", "", "Path to configuration file")
+	flag.StringVar(&config.Config, "config", "", "Path to configuration file")
 	flag.Parse()
 
 	if config.Config != "" {
@@ -52,6 +53,7 @@ func GetConfig() (Config, error) {
 
 	// Get flags
 	flag.StringVar(&config.Address, "a", config.Address, "Server to send metrics to")
+	flag.StringVar(&config.GRPCAddress, "grpc-address", config.GRPCAddress, "GRPC server to send metrics to")
 	flag.DurationVar(&config.ReportInterval, "r", config.ReportInterval, "Interval to send metrics to server")
 	flag.DurationVar(&config.PollInterval, "p", config.PollInterval, "Interval to collect metrics")
 	flag.StringVar(&config.Key, "k", config.Key, "Key to sign")

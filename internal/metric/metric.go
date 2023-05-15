@@ -63,6 +63,29 @@ func FromProto(p *proto.Metric) *Metric {
 	}
 }
 
+func (m *Metric) ToProto() *proto.Metric {
+	res := &proto.Metric{
+		Id:    m.ID,
+		Mtype: proto.Metric_UNSPECIFIED,
+		Hash:  m.Hash,
+	}
+
+	switch m.MType {
+	case Gauge:
+		res.Mtype = proto.Metric_GAUGE
+	case Counter:
+		res.Mtype = proto.Metric_COUNTER
+	}
+
+	if m.Value != nil {
+		res.Value = *m.Value
+	}
+	if m.Delta != nil {
+		res.Delta = *m.Delta
+	}
+	return res
+}
+
 // Type returns type of the metric.
 func (m *Metric) Type() Type {
 	return m.MType
