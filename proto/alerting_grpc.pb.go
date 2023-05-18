@@ -8,6 +8,7 @@ package proto
 
 import (
 	context "context"
+	empty "github.com/golang/protobuf/ptypes/empty"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -26,7 +27,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AlertingClient interface {
-	UpdateMetrics(ctx context.Context, in *UpdateMetricsRequest, opts ...grpc.CallOption) (*UpdateMetricsResponse, error)
+	UpdateMetrics(ctx context.Context, in *UpdateMetricsRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 }
 
 type alertingClient struct {
@@ -37,8 +38,8 @@ func NewAlertingClient(cc grpc.ClientConnInterface) AlertingClient {
 	return &alertingClient{cc}
 }
 
-func (c *alertingClient) UpdateMetrics(ctx context.Context, in *UpdateMetricsRequest, opts ...grpc.CallOption) (*UpdateMetricsResponse, error) {
-	out := new(UpdateMetricsResponse)
+func (c *alertingClient) UpdateMetrics(ctx context.Context, in *UpdateMetricsRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, Alerting_UpdateMetrics_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -50,7 +51,7 @@ func (c *alertingClient) UpdateMetrics(ctx context.Context, in *UpdateMetricsReq
 // All implementations must embed UnimplementedAlertingServer
 // for forward compatibility
 type AlertingServer interface {
-	UpdateMetrics(context.Context, *UpdateMetricsRequest) (*UpdateMetricsResponse, error)
+	UpdateMetrics(context.Context, *UpdateMetricsRequest) (*empty.Empty, error)
 	mustEmbedUnimplementedAlertingServer()
 }
 
@@ -58,7 +59,7 @@ type AlertingServer interface {
 type UnimplementedAlertingServer struct {
 }
 
-func (UnimplementedAlertingServer) UpdateMetrics(context.Context, *UpdateMetricsRequest) (*UpdateMetricsResponse, error) {
+func (UnimplementedAlertingServer) UpdateMetrics(context.Context, *UpdateMetricsRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateMetrics not implemented")
 }
 func (UnimplementedAlertingServer) mustEmbedUnimplementedAlertingServer() {}

@@ -54,12 +54,16 @@ func FromProto(p *proto.Metric) *Metric {
 	if p.Mtype == proto.Metric_COUNTER {
 		mtype = Counter
 	}
+	hash := ""
+	if p.Hash != nil {
+		hash = *p.Hash
+	}
 	return &Metric{
 		ID:    p.Id,
 		MType: mtype,
-		Value: &p.Value,
-		Delta: &p.Delta,
-		Hash:  p.Hash,
+		Value: p.Value,
+		Delta: p.Delta,
+		Hash:  hash,
 	}
 }
 
@@ -67,7 +71,7 @@ func (m *Metric) ToProto() *proto.Metric {
 	res := &proto.Metric{
 		Id:    m.ID,
 		Mtype: proto.Metric_UNSPECIFIED,
-		Hash:  m.Hash,
+		Hash:  &m.Hash,
 	}
 
 	switch m.MType {
@@ -78,10 +82,10 @@ func (m *Metric) ToProto() *proto.Metric {
 	}
 
 	if m.Value != nil {
-		res.Value = *m.Value
+		res.Value = m.Value
 	}
 	if m.Delta != nil {
-		res.Delta = *m.Delta
+		res.Delta = m.Delta
 	}
 	return res
 }

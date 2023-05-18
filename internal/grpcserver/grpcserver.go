@@ -8,11 +8,13 @@ import (
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	"github.com/denistakeda/alerting/internal/storage"
 	"github.com/denistakeda/alerting/proto"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type GRPCServer struct {
@@ -60,10 +62,9 @@ func (s *GRPCServer) Stop() {
 	s.logger.Info().Msgf("GRPC server was stopped")
 }
 
-func (s *GRPCServer) UpdateMetrics(ctx context.Context, req *proto.UpdateMetricsRequest) (*proto.UpdateMetricsResponse, error) {
+func (s *GRPCServer) UpdateMetrics(ctx context.Context, req *proto.UpdateMetricsRequest) (*empty.Empty, error) {
 	s.logger.Debug().Msgf("got %d metrics", len(req.Metrics))
 
-	var response = proto.UpdateMetricsResponse{}
 	ms := make([]*metric.Metric, 0, len(req.Metrics))
 	for _, m := range req.Metrics {
 		ms = append(ms, metric.FromProto(m))
@@ -73,5 +74,5 @@ func (s *GRPCServer) UpdateMetrics(ctx context.Context, req *proto.UpdateMetrics
 		return nil, status.Errorf(codes.Internal, "failed to store metrics")
 	}
 
-	return &response, nil
+	return &emptypb.Empty{}, nil
 }
