@@ -82,6 +82,10 @@ func (c *HTTPClient) SendMetrics(metrics []*metric.Metric) error {
 		return errors.Wrap(err, "unable to close a body")
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return errors.Errorf("not successfull status %d", resp.StatusCode)
+	}
+
 	return nil
 }
 
