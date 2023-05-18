@@ -13,12 +13,25 @@ import (
 
 type GRPCClient struct {
 	address string
+	client  proto.AlertingClient
+	conn    *grpc.ClientConn
 }
 
 var _ ports.Client = (*GRPCClient)(nil)
 
 func NewGRPCClient(address string) (*GRPCClient, error) {
-	return &GRPCClient{address: address}, nil
+	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create a connection")
+	}
+
+	client := proto.NewAlertingClient(conn)
+
+	return &GRPCClient{
+		address: address,
+		client:  client,
+		conn:    conn,
+	}, nil
 }
 
 func (c *GRPCClient) SendMetrics(metrics []*metric.Metric) error {
@@ -27,20 +40,17 @@ func (c *GRPCClient) SendMetrics(metrics []*metric.Metric) error {
 		ms = append(ms, m.ToProto())
 	}
 
-	conn, err := grpc.Dial(c.address, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return errors.Wrap(err, "failed to create a connection")
-	}
-	defer conn.Close()
-
-	client := proto.NewAlertingClient(conn)
-
 	var req proto.UpdateMetricsRequest
 	req.Metrics = ms
 
-	_, err = client.UpdateMetrics(context.Background(), &req)
+	_, err := c.client.UpdateMetrics(context.Background(), &req)
 	if err != nil {
 		return errors.Wrap(err, "failed to send metrics to the server")
 	}
+
 	return nil
+}
+
+func (c *GRPCClient) Stop() error {
+	return c.conn.Close()
 }

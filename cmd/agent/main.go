@@ -53,6 +53,8 @@ func main() {
 		logger.Fatal().Err(err).Msg("unable to initiate a client")
 	}
 
+	defer client.Stop()
+
 	go readStats(conf.PollInterval, memStorage, logger)
 	go sendStats(client, conf.ReportInterval, logger, memStorage)
 

@@ -85,6 +85,11 @@ func (c *HTTPClient) SendMetrics(metrics []*metric.Metric) error {
 	return nil
 }
 
+func (*HTTPClient) Stop() error {
+	// Do nothing
+	return nil
+}
+
 // Do executes the query with rate-limiting mechanism
 func (c *HTTPClient) Do(req *http.Request) (*http.Response, error) {
 	respChan := make(chan *http.Response)
