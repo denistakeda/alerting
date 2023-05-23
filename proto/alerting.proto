@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package alerting;
+
+option go_package = "github.com/denistakeda/alerting/proto";
+
+import "google/protobuf/empty.proto";
+
+service Alerting {
+  rpc UpdateMetrics(UpdateMetricsRequest) returns (google.protobuf.Empty);
+}
+
+message UpdateMetricsRequest {
+  repeated Metric metrics = 1;
+}
+
+message Metric {
+  string id = 1;
+  MType mtype = 2;
+  optional double value = 3;
+  optional int64 delta = 4;
+  optional string hash = 5;
+
+  enum MType {
+    UNSPECIFIED = 0;
+    GAUGE = 1;
+    COUNTER = 2;
+  }
+}

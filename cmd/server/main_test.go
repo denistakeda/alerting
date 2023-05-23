@@ -78,7 +78,7 @@ func Test_updateMetric(t *testing.T) {
 			s := mocks.NewMockStorage(ctrl)
 			s.EXPECT().Update(gomock.Any(), tt.met).Return(tt.met, nil).AnyTimes()
 
-			router := newRouter()
+			router := newRouter("")
 			apiHandler := handler.New(handler.Params{
 				Addr:       "",
 				HashKey:    "",
@@ -175,7 +175,7 @@ func Test_getMetric(t *testing.T) {
 				Return(tt.storageMock.retMetric, tt.storageMock.retOk).
 				AnyTimes()
 
-			router := newRouter()
+			router := newRouter("")
 			apiHandler := handler.New(handler.Params{
 				Addr:       "",
 				HashKey:    "",
@@ -286,7 +286,7 @@ func Test_update(t *testing.T) {
 				Return(tt.storageMock.resMetric, tt.storageMock.resError).
 				AnyTimes()
 
-			router := newRouter()
+			router := newRouter("")
 			apiHandler := handler.New(handler.Params{
 				Addr:       "",
 				HashKey:    "",

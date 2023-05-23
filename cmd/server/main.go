@@ -12,6 +12,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -19,7 +20,9 @@ import (
 
 	"github.com/denistakeda/alerting/docs"
 	servercfg "github.com/denistakeda/alerting/internal/config/server"
+	"github.com/denistakeda/alerting/internal/grpcserver"
 	"github.com/denistakeda/alerting/internal/handler"
+	"github.com/denistakeda/alerting/internal/middleware"
 	"github.com/denistakeda/alerting/internal/services/loggerservice"
 	s "github.com/denistakeda/alerting/internal/storage"
 	"github.com/denistakeda/alerting/internal/storage/dbstorage"
@@ -54,27 +57,34 @@ func main() {
 		log.Fatal(err)
 	}
 
-	r := newRouter()
+	r := newRouter(conf.TrustedSubnet)
 	apiHandler := handler.New(handler.Params{
 		Addr:       conf.Address,
 		HashKey:    conf.Key,
 		Cert:       conf.Certificate,
 		PrivateKey: conf.CryptoKey,
+
 		Engine:     r,
 		Storage:    storage,
 		LogService: logService,
 	})
+	serverChan := apiHandler.Start()
 	defer apiHandler.Stop()
+
+	grpcServer := grpcserver.NewGRPCServer(logService, storage, conf.GRPCAddress)
+	grpcServerChan := grpcServer.Start()
+	defer grpcServer.Stop()
 
 	docs.SwaggerInfo.BasePath = "/"
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	r.LoadHTMLGlob("internal/templates/*")
-	serverChan := apiHandler.Start()
 	interruptChan := handleInterrupt()
 	select {
 	case serverError := <-serverChan:
 		log.Println(serverError)
+	case grpcServerError := <-grpcServerChan:
+		log.Println(grpcServerError)
 	case <-interruptChan:
 		log.Println("Program was interrupted")
 	}
@@ -92,13 +102,22 @@ func printInfo() {
 	fmt.Printf("Build commit: %s\n", buildCommit)
 }
 
-func newRouter() *gin.Engine {
+func newRouter(trustedSubnet string) *gin.Engine {
 	r := gin.New()
 
 	r.RedirectTrailingSlash = false
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 	r.Use(gin.Recovery())
 	r.Use(logger.SetLogger())
+
+	if trustedSubnet != "" {
+		_, subnet, err := net.ParseCIDR(trustedSubnet)
+		if err != nil {
+			log.Fatal("'TrustedSubnet' is incorrect")
+		}
+
+		r.Use(middleware.CheckSubnetMiddleware(subnet))
+	}
 
 	return r
 }

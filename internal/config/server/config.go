@@ -15,6 +15,7 @@ import (
 type Config struct {
 	Config        string        `env:"CONFIG"`
 	Address       string        `env:"ADDRESS" json:"address"`
+	GRPCAddress   string        `env:"GRPC_ADDRESS" json:"grpc_address"`
 	StoreInterval time.Duration `env:"STORE_INTERVAL" json:"store_interval"`
 	StoreFile     string        `env:"STORE_FILE" json:"store_file"`
 	Restore       bool          `env:"RESTORE" json:"restore"`
@@ -22,6 +23,7 @@ type Config struct {
 	DatabaseDSN   string        `env:"DATABASE_DSN" json:"database_dsn"`
 	Certificate   string        `env:"CERTIFICATE" json:"certificate"`
 	CryptoKey     string        `env:"CRYPTO_KEY" json:"crypto_key"`
+	TrustedSubnet string        `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
 }
 
 // GetConfig extracts the configuration from environment variables and flags
@@ -29,6 +31,7 @@ func GetConfig() (Config, error) {
 	// Set default values
 	config := Config{
 		Address:       "localhost:8080",
+		GRPCAddress:   ":3200",
 		StoreInterval: 300 * time.Second,
 		StoreFile:     "/tmp/devops-metrics-db.json",
 		Restore:       true,
@@ -53,6 +56,7 @@ func GetConfig() (Config, error) {
 
 	// Get flags
 	flag.StringVar(&config.Address, "a", config.Address, "Where to start server")
+	flag.StringVar(&config.GRPCAddress, "grpc-address", config.GRPCAddress, "Where to start GRPC server")
 	flag.BoolVar(&config.Restore, "r", config.Restore, "Restore from the file")
 	flag.DurationVar(&config.StoreInterval, "i", config.StoreInterval, "Interval to dump state")
 	flag.StringVar(&config.StoreFile, "f", config.StoreFile, "Database file")
@@ -60,6 +64,7 @@ func GetConfig() (Config, error) {
 	flag.StringVar(&config.DatabaseDSN, "d", config.DatabaseDSN, "Database DSN")
 	flag.StringVar(&config.Certificate, "certificate", config.Certificate, "Path to a file with a certificate")
 	flag.StringVar(&config.CryptoKey, "crypto-key", config.CryptoKey, "Path to a file with a private key")
+	flag.StringVar(&config.TrustedSubnet, "t", config.TrustedSubnet, "Trusted subnet")
 	flag.Parse()
 
 	// Populate data from the env variables
